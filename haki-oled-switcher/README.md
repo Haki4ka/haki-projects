@@ -1,34 +1,106 @@
-# Haki OLED Switcher
+# Haki OLED — Sites + Theme
 
-A tiny Brave extension with one toolbar button. The button opens a small dark
-menu with two independent switches:
+Одна картка, одна закріплена кнопка, одне невелике меню з двома незалежними перемикачами.
 
-- **Browser theme** — enables/disables a pure-black theme by its extension ID;
-- **Site darkening** — applies per-site styling without reloading the page.
+## Що всередині
 
-`Alt + Shift + D` toggles both at once. The same two controls are available in
-the context menu and on the options page.
+1. **Тема браузера** — чорна тема `Haki OLED Browser` (ID `embggbpfahheclcjifbkcejahhjnfcfc`).
+   Розширення не видаляє її, а тільки вмикає/вимикає через `chrome.management.setEnabled`.
+2. **Затемнення сайтів** — ті самі правила, що раніше були в `Haki OLED Dark Sites`.
+   Світлі сайти стають глибоко чорними, уже темні не чіпаються. YouTube,
+   YouTube Music, Twitch і Rezka мають окремі правила.
 
-Version 3.1.0.
+### Універсальні виправлення з v3.2.0 (26.11.2026)
 
-## Site handling
+- **Відео більше не інвертується.** Фільтр сторінки `invert(1) hue-rotate(180deg) contrast(1.6)`,
+  а медіа отримують точну обернену функцію `invert(1) hue-rotate(180deg) contrast(0.625)`.
+  Разом це тотожність: кольори у відео й картинках лишаються природними.
+- **Сірі панелі доведено до чорного.** `contrast(1.6)` стискає сірі `#dedede`/`#ccc`
+  до білого перед інверсією, тому після неї вони стають чорними.
+- **Темні плашки з білим текстом** (кнопки, підписи поверх відео, бейджі) окремо
+  нормалізуються: біле тло й чорний текст перед інверсією → чорна плашка зі світлим текстом.
+- **Shadow DOM і iframe.** Стиль для медіа вставляється в кожен shadow root;
+  контент-скрипт тепер працює й усередині iframe (`all_frames`). Батько повідомляє
+  frame через `postMessage`, чи він інвертує: звичайні сайти всередині iframe
+  інвертуються один раз, а вбудовані темні (YouTube/Twitch/Vimeo/Dailymotion) —
+  скасовують батьківську інверсію й лишаються рідними.
+- **Краще визначення світлих сторінок.** Дивимось не тільки на `<body>`, а й на
+  реально видимий фон у шести точках екрана. Сайти з прозорим `<body>` (Pexels,
+  Pixabay) тепер затемнюються. Сам прапорець `color-scheme: dark` більше не блокує
+  затемнення, якщо сторінка насправді біла.
+- **Twitch:** ліва панель (`side-nav`), правий чат (`chat-room`) і всі проміжні
+  обгортки примусово `#000`; текст повідомлень — `#d3d3d9`, кольори імен,
+  емодзі й посилань не змінюються.
 
-- Generic light pages get an inversion filter with images inverted back.
-- YouTube and YouTube Music get direct black OLED variables instead of a
-  filter, so video and accents keep their colours.
-- Twitch gets its own black variable overrides.
-- Rezka has a separate stylesheet because it ships both a light and a dark
-  theme of its own.
+## Користування
 
-The stylesheet is injected from `detect.js` rather than from `manifest.json`
-content scripts; this keeps the extension out of Brave's "theme" bucket, which
-would otherwise ignore site permissions.
+### Головне меню — кнопка **H** на панелі Brave (з v3.0.0)
 
-## Install
+Клік по кнопці відкриває компактне меню (289×236 px) з двома рядом розташованими
+перемикачами:
 
-Extensions page → developer mode → **Load unpacked** → select this folder,
-then pin the "H" button from the extensions toolbar menu.
+- **Тема браузера** — чорна рамка й панель Brave.
+- **Затемнення сайтів** — сайти у глибокому чорному.
 
-## License
+Кожен перемикач діє окремо й одразу. Унизу меню — рядок стану
+(«Deep black everywhere», «Black theme, normal sites» тощо) і підказка про гарячу клавішу.
+**Усі написи в інтерфейсі англійською** — так розширення зрозуміле будь-кому,
+якщо його потім випускати в магазин.
 
-MIT.
+Підказка на самій кнопці теж показує обидва стани: `Haki OLED — theme ON, sites ON`.
+
+Смужка вкладок: чорна `rgb(0,0,0)` = тема ввімкнена, сіра `rgb(31,31,35)` = вимкнена.
+
+### Гаряча клавіша `Alt+Shift+D` — швидкий режим «все разом» (з v3.1.0)
+
+Це окрема швидка дія, не те саме, що перемикачі в меню:
+
+- якщо **обидва** увімкнені → натискання вимикає **обидва**;
+- якщо є будь-який вимкнений (або обидва вимкнені) → натискання вмикає **обидва**;
+- змішаного стану після натискання не буває — тема й сайти завжди узгоджені.
+
+Якщо треба щось одне — робиш у меню вручну, а потім гаряча клавіша знову
+зводить обидва до спільного стану. Клавішу можна змінити в `brave://extensions/shortcuts`.
+
+### Інші способи керування сайтами
+
+Вимикач сайтів дублюється, щоб не доводилося відкривати меню:
+
+1. `brave://extensions` → картка **Haki OLED — Sites + Theme** → **Details** → **Extension options**.
+2. Правою кнопкою по сторінці → **Haki OLED: disable/enable site darkening**.
+
+Стан зберігається між перезапусками браузера. Сторінки **не перезавантажуються**:
+клас і вставлені стилі знімаються/повертаються одразу. За замовчуванням затемнення увімкнено.
+
+Не дивуйся, якщо `brave://settings/appearance` показує «Theme Brave Colors»
+після повернення теми — це лише підпис, сама смужка лишається чорною.
+
+## Важливо
+
+- У маніфесті **немає** ключа `theme`. Якщо додати його разом із `content_scripts`,
+  Brave сприйме пакет лише як тему й перестане застосовувати правила до сайтів.
+- CSS для YouTube/Music/Twitch тримається всередині `detect.js`, не окремим файлом
+  у маніфесті — так Brave рідше позначає розширення як «потребує перезавантаження».
+- Після зміни `manifest.json` спершу **Update** на `brave://extensions/`, потім
+  **Reload** на сторінці деталей: `brave://extensions/?id=hldedkhoejhiikhkidpfddallpoligaj`.
+  Brave може зняти кнопку з панелі — закріпи її знову через меню розширень (Pin).
+- Після перезавантаження розширення вже відкриті вкладки мають старі контент-скрипти
+  і не чують нові команди. Для перевірки відкрий свіжу вкладку.
+- Стара папка `Haki OLED Dark Sites` лишилася тільки як архів/бекап.
+  Її картку з Brave прибрано, щоб правила не подвоювалися.
+- Бекапи: `Haki OLED Merge Backup 2026-11-25\` (злиття, v2.0.0),
+  `Switcher before site toggle` (v2.1.0), `Switcher before popup menu` (v3.0.0),
+  `Switcher before v3.1 English + hotkey` (v3.1.0),
+   `Switcher before v3.2 universal` (v3.2.0).
+
+## Файли
+
+- `manifest.json` — v3.2.0: дозвіл `management`, `storage`, `contextMenus`, `<all_urls>`,
+  два content scripts (перший із `all_frames: true`) і `action.default_popup`. Усі рядки — англійською.
+- `background.js` — центральна логіка обох перемикачів, контекстне меню, гаряча клавіша
+  `toggleAll()` (обидві функції разом, без змішаних станів), динамічна підказка.
+- `popup.html`, `popup.css`, `popup.js` — саме меню з двома перемикачами.
+- `options.html`, `options.js` — додаткова сторінка налаштувань.
+- `detect.js` — розумне визначення кольору сторінки + OLED-правила для YouTube/Music/Twitch.
+- `dark-websites.css`, `rezka.css` — загальна інверсія й окремий режим Rezka.
+- `icon48.png`, `icon128.png` — іконка кнопки.

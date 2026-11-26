@@ -4,21 +4,53 @@
    Стиль застосовується тільки якщо detect.js виявив світлу сторінку. */
 
 html.haki-force-dark {
-  background-color: #FFFFFF !important; /* після інверсії стає #000000 */
-  filter: invert(1) hue-rotate(180deg) !important;
+  /* Біле ДО інверсії = чистий чорний після.
+     contrast(1.6) стискає сірі поверхні (#dedede, #ccc, #bdbdbd) до білого,
+     тому після інверсії вони теж стають чорними, а не сірими. */
+  background-color: #FFFFFF !important;
+  filter: invert(1) hue-rotate(180deg) contrast(1.6) !important;
 }
 
+/* Точна обернена функція до фільтра сторінки:
+   contrast(0.625) = 1 / 1.6. Разом із батьківським фільтром дає
+   тотожність — кольори відео/картинок лишаються природними.
+   iframe НЕ інвертуємо тут: батьківський фільтр уже інвертує його
+   повністю, а друга інверсія на самому iframe повертала білі панелі.
+   Усередині iframe працює all_frames + клас haki-frame-media. */
 html.haki-force-dark img,
 html.haki-force-dark video,
 html.haki-force-dark canvas,
 html.haki-force-dark svg,
 html.haki-force-dark picture,
-html.haki-force-dark iframe,
+html.haki-force-dark source,
 html.haki-force-dark embed,
 html.haki-force-dark object,
 html.haki-force-dark [style*="background-image"] {
-  filter: invert(1) hue-rotate(180deg) !important;
+  filter: invert(1) hue-rotate(180deg) contrast(0.625) !important;
 }
+
+/* Вміст iframe: батько вже інвертує всю поверхню, тому тут інвертуємо
+   тільки медіа, щоб відео всередині не мало перевернутих кольорів. */
+html.haki-frame-media img,
+html.haki-frame-media video,
+html.haki-frame-media canvas,
+html.haki-frame-media svg,
+html.haki-frame-media picture,
+html.haki-frame-media source,
+html.haki-frame-media embed,
+html.haki-frame-media object,
+html.haki-frame-media [style*="background-image"] {
+  filter: invert(1) hue-rotate(180deg) contrast(0.625) !important;
+}
+
+/* Вбудований темний сайт (YouTube/Twitch тощо): скасовуємо батьківську
+   інверсію, щоб його рідна темна тема лишилась темною. */
+html.haki-frame-native {
+  filter: invert(1) hue-rotate(180deg) contrast(0.625) !important;
+}
+
+/* Стиль, який detect.js вставляє в shadow DOM (туди звичайний CSS не діє). */
+/* haki-shadow-media: див. SHADOW_CSS у detect.js */
 
 /* НЕ додаємо color-scheme: dark для полів вводу!
    Була помилка (2026-11-23): браузер робив поле сірим (#3B3B3B) ще ДО

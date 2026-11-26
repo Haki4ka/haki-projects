@@ -11,15 +11,112 @@
   var root = document.documentElement;
   var SITES_KEY = 'sitesEnabled';
   var enabled = true;
+  var inFrame = window.self !== window.top;
+  var parentDark = null;
+  var shadowStyleId = 'haki-shadow-media';
+  var SHADOW_CSS = 'video,img,canvas,picture,source,embed,object,[style*="background-image"]' +
+    '{filter:invert(1) hue-rotate(180deg) contrast(0.625) !important}';
+
+  /* iframe не інвертуємо вдруге — батько вже це робить. Проте медіа всередині
+     треба інвертувати, бо батьківський фільтр перевертає і їх.
+     Темні сайти всередині iframe, навпаки, скасовують батьківську інверсію. */
+  function nativeDarkHost() {
+    var h = location.hostname;
+    return /(^|\.)youtube\.com$|(^|\.)twitch\.tv$|(^|\.)dailymotion\.com$|(^|\.)vimeo\.com$/i.test(h);
+  }
+
+  function luminance(color) {
+    if (!color || color.indexOf('rgb') !== 0) return null;
+    var m = color.match(/[\d.]+/g);
+    if (!m || m.length < 3) return null;
+    /* Прозорий фон не є «темним» — інакше сайти з прозорим <body>
+       (Pexels, Pixabay) ніколи не затемнювались. */
+    if (m.length > 3 && Number(m[3]) < 0.15) return null;
+    return (0.2126 * Number(m[0]) + 0.7152 * Number(m[1]) + 0.0722 * Number(m[2])) / 255;
+  }
+
+  function applyFrame(parentIsDark) {
+    parentDark = !!parentIsDark;
+    strip();
+    if (!enabled) return;
+    if (parentDark) root.classList.add(nativeDarkHost() ? 'haki-frame-native' : 'haki-frame-media');
+  }
+
+  /* Стиль для shadow DOM: звичайний CSS батьківського документа не діє
+     всередині shadow root, тому відео там лишалось інвертованим. */
+  function injectShadowStyles() {
+    if (!enabled || !root.classList.contains('haki-force-dark')) return;
+    var hosts = document.querySelectorAll('*');
+    for (var i = 0; i < hosts.length; i++) {
+      var sr = hosts[i].shadowRoot;
+      if (!sr || sr.getElementById(shadowStyleId)) continue;
+      var s = document.createElement('style');
+      s.id = shadowStyleId;
+      s.textContent = SHADOW_CSS;
+      (sr.head || sr).appendChild(s);
+    }
+  }
+
+  /* Темні плашки з білим текстом (кнопки, підписи поверх відео, бейджі)
+     після загальної інверсії ставали БІЛИМИ. Перефарбовуємо їх до білого
+     до інверсії — тоді після неї вони чорні зі світлим текстом.
+     Кольорові акценти, картинки й медіа не чіпаємо. Один прохід, без
+     спостерігача: getComputedStyle тут викликається один раз на елемент. */
+  var fixedColors = [];
+  function normalizeColors() {
+    if (!enabled || !root.classList.contains('haki-force-dark')) return;
+    var els = document.querySelectorAll('body *');
+    for (var i = 0; i < els.length && i < 4000; i++) {
+      var el = els[i];
+      if (el.hasAttribute('data-haki-color-fix')) continue;
+      if (/^(VIDEO|IMG|CANVAS|SVG|PICTURE|IFRAME|SOURCE|EMBED|OBJECT)$/.test(el.tagName)) continue;
+      var s = getComputedStyle(el);
+      var bg = s.backgroundColor;
+      var l = luminance(bg);
+      if (l === null || l > 0.28) continue;
+      var p = (bg.match(/[\d.]+/g) || []).map(Number);
+      if (p.length >= 3 && (Math.max(p[0], p[1], p[2]) - Math.min(p[0], p[1], p[2])) > 18) continue;
+      var cl = luminance(s.color);
+      if (cl === null || cl < 0.5) continue;
+      if (s.backgroundImage && s.backgroundImage !== 'none') continue;
+      if (s.backdropFilter && s.backdropFilter !== 'none') continue;
+      var r = el.getBoundingClientRect();
+      if (r.width < 24 || r.height < 12) continue;
+      fixedColors.push({ el: el, bg: el.style.backgroundColor, color: el.style.color });
+      el.style.setProperty('background-color', '#fff', 'important');
+      el.style.setProperty('color', '#000', 'important');
+      el.setAttribute('data-haki-color-fix', '1');
+    }
+  }
+  function restoreColors() {
+    for (var i = 0; i < fixedColors.length; i++) {
+      var f = fixedColors[i];
+      f.el.style.removeProperty('background-color');
+      f.el.style.removeProperty('color');
+      if (f.bg) f.el.style.backgroundColor = f.bg;
+      if (f.color) f.el.style.color = f.color;
+      f.el.removeAttribute('data-haki-color-fix');
+    }
+    fixedColors = [];
+  }
 
   /* Зняття затемнення: наші CSS працюють ТІЛЬКИ під цими класами,
      тому достатньо прибрати класи й вставлені <style>. Сторінку не перезавантажуємо. */
   function strip() {
-    root.classList.remove('haki-force-dark', 'haki-youtube', 'haki-twitch', 'haki-rezka');
+    restoreColors();
+    root.classList.remove('haki-force-dark', 'haki-youtube', 'haki-twitch', 'haki-rezka',
+      'haki-frame-media', 'haki-frame-native');
     ['haki-youtube-oled', 'haki-twitch-oled'].forEach(function (id) {
       var el = document.getElementById(id);
       if (el && el.parentNode) el.parentNode.removeChild(el);
     });
+    var hosts = document.querySelectorAll('*');
+    for (var i = 0; i < hosts.length; i++) {
+      var sr = hosts[i].shadowRoot;
+      if (!sr) continue;
+      var s = sr.getElementById ? sr.getElementById(shadowStyleId) : sr.querySelector('#' + shadowStyleId);
+      if (s && s.parentNode) s.parentNode.removeChild(s);
+    }
   }
 
   /* YouTube — особливий випадок (додано 25.11.2026).
@@ -172,7 +269,28 @@
       'html, html body, html #root { background-color: #000 !important; }',
       /* Жорстко задані сірі поверхні, які не слухаються змінних */
       'html .carousel-player-nav-arrow__container, html .carousel-metadata,',
-      'html [class*="ScLayoutCssVars"] { background-color: #0a0a0a !important; }'
+      'html [class*="ScLayoutCssVars"] { background-color: #000 !important; }',
+      /* Ліва панель (стріми/підписки) і правий чат були сірими: #0e0e10 і #18181b.
+         Перекриваємо й сам контейнер, і всі проміжні обгортки. */
+      'html.haki-twitch [class*="side-nav"],',
+      'html.haki-twitch [class*="channel-root__left-column"],',
+      'html.haki-twitch [class*="channel-root__right-column"],',
+      'html.haki-twitch [class*="chat-room"],',
+      'html.haki-twitch [class*="chat-wysiwyg"],',
+      'html.haki-twitch [class*="chat-input"] { background-color: #000 !important; }',
+      'html.haki-twitch [class*="side-nav-card"] { background-color: #000 !important; }',
+      'html.haki-twitch [class*="side-nav-card"]:hover,',
+      'html.haki-twitch [class*="side-nav-card"]:focus { background-color: #0a0a0a !important; }',
+      /* Текст повідомлень — світло-сірий; кольори імен, емодзі й посилань
+         лишаємо недоторканими (вони задані на дочірніх елементах). */
+      'html.haki-twitch [class*="chat-line__message"],',
+      'html.haki-twitch [class*="chat-message"],',
+      'html.haki-twitch [data-test-selector="chat-line"] {',
+      '  background-color: transparent !important; color: #d3d3d9 !important;',
+      '}',
+      'html.haki-twitch [class*="chat-line__body"],',
+      'html.haki-twitch [class*="message-body"],',
+      'html.haki-twitch [class*="chat-message-text"] { color: #d3d3d9 !important; }'
     ].join('\n');
     var style = document.createElement('style');
     style.id = 'haki-twitch-oled';
@@ -186,6 +304,16 @@
      підключаємо окремий rezka.css, який сам стежить за класом body. */
   function runDetection() {
     strip();
+
+    if (inFrame) {
+      window.parent.postMessage({ type: 'haki-frame-request' }, '*');
+      if (parentDark === null) {
+        window.setTimeout(function () {
+          if (parentDark === null) applyFrame(enabled);
+        }, 1200);
+      }
+      return;
+    }
 
   if (/(^|\.)rezka/i.test(location.hostname)) {
     root.classList.remove('haki-force-dark');
@@ -210,44 +338,76 @@
   var loaded = false;
   var ticks = 0;
 
-  function luminance(color) {
-    if (!color || color.indexOf('rgb') !== 0) return null;
-    var m = color.match(/[\d.]+/g);
-    if (!m || m.length < 3) return null;
-    return (0.2126 * Number(m[0]) + 0.7152 * Number(m[1]) + 0.0722 * Number(m[2])) / 255;
-  }
-
   function backgrounds() {
     var list = [root, document.body];
     if (document.body) {
       var kids = document.body.children;
-      for (var i = 0; i < Math.min(4, kids.length); i++) list.push(kids[i]);
+      for (var i = 0; i < Math.min(5, kids.length); i++) list.push(kids[i]);
     }
     return list.map(function (el) {
       return el ? getComputedStyle(el).backgroundColor : null;
     });
   }
 
+  /* Дивимось на те, що реально видно у вікні: elementFromPoint + найближчий
+     непрозорий предок. Це ловить білі сайти, у яких body прозорий, а фон
+     заданий глибше (раніше такі сторінки лишались білими). */
+  function visibleBackgrounds() {
+    var pts = [[0.5, 0.45], [0.12, 0.2], [0.88, 0.2], [0.5, 0.85], [0.12, 0.72], [0.88, 0.72]];
+    var out = [];
+    for (var i = 0; i < pts.length; i++) {
+      var el = document.elementFromPoint(innerWidth * pts[i][0], innerHeight * pts[i][1]);
+      var guard = 0;
+      while (el && guard++ < 12) {
+        var c = getComputedStyle(el).backgroundColor;
+        if (luminance(c) !== null) { out.push(c); break; }
+        el = el.parentElement;
+      }
+    }
+    return out;
+  }
+
+  function notifyFrames(on) {
+    if (inFrame) return;
+    try {
+      for (var i = 0; i < window.frames.length; i++) {
+        window.frames[i].postMessage({ type: 'haki-frame-state', enabled: !!on }, '*');
+      }
+    } catch (e) {}
+  }
+
   function evaluate(final) {
     if (!enabled || !root || !document.body) return;
 
     var scheme = getComputedStyle(root).colorScheme || '';
-    if (scheme.indexOf('dark') !== -1) {
-      // Сайт сам темний — скасовуємо інверсію, якщо вона вже ввімкнулась.
-      root.classList.remove('haki-force-dark');
-      return;
-    }
-
-    var isLight = backgrounds().some(function (c) {
+    var schemeDark = scheme.indexOf('dark') !== -1;
+    var vis = visibleBackgrounds();
+    var samples = backgrounds().concat(vis);
+    var isLight = samples.some(function (c) {
       var l = luminance(c);
       return l !== null && l > 0.55;
     });
+    var isDark = vis.length > 0 && vis.every(function (c) {
+      var l = luminance(c);
+      return l !== null && l < 0.25;
+    });
 
-    if (isLight) {
+    /* Якщо непрозорого фону не знайдено, браузер малює біле полотно —
+       це теж світла сторінка (наприклад, example.com). */
+    var fallbackLight = vis.length === 0 && !schemeDark;
+
+    if (isLight || fallbackLight) {
+      var wasOn = root.classList.contains('haki-force-dark');
       root.classList.add('haki-force-dark');
+      if (!wasOn) normalizeColors();
+      injectShadowStyles();
+    } else if (schemeDark && (isDark || vis.length === 0)) {
+      /* Сайт справді темний — інверсія не потрібна. */
+      root.classList.remove('haki-force-dark');
     } else if (final) {
       root.classList.remove('haki-force-dark');
     }
+    notifyFrames(root.classList.contains('haki-force-dark'));
   }
 
   function retry() {
@@ -261,6 +421,7 @@
     if (!enabled) return;
     loaded = true;
     evaluate(true);
+    window.setTimeout(normalizeColors, 1200);
   }
 
   if (document.readyState === 'loading') {
@@ -270,6 +431,38 @@
   }
   window.addEventListener('load', finish, { once: true });
   window.setTimeout(finish, 3000); // страхування, якщо load не спрацює
+  window.setTimeout(injectShadowStyles, 4000);
+
+  /* Вузький спостерігач ТІЛЬКИ на додані вузли з shadow root.
+     Не читає getComputedStyle і не дивиться на class/style — саме це
+     2026-11-23 підвішувало Kleinanzeigen. Тут лише пошук нових хостів
+     і відкладене вставлення одного <style>. */
+  if (window.MutationObserver && !inFrame) {
+    var shadowTimer = null;
+    var shadowObserver = new MutationObserver(function (list) {
+      if (!enabled || !root.classList.contains('haki-force-dark')) return;
+      var found = false;
+      for (var i = 0; i < list.length && !found; i++) {
+        var nodes = list[i].addedNodes;
+        for (var j = 0; j < nodes.length && j < 200 && !found; j++) {
+          var n = nodes[j];
+          if (n.nodeType !== 1) continue;
+          if (n.shadowRoot) { found = true; break; }
+          if (n.querySelectorAll) {
+            var kids = n.querySelectorAll('*');
+            for (var k = 0; k < kids.length && k < 200; k++) {
+              if (kids[k].shadowRoot) { found = true; break; }
+            }
+          }
+        }
+      }
+      if (found) {
+        if (shadowTimer) window.clearTimeout(shadowTimer);
+        shadowTimer = window.setTimeout(injectShadowStyles, 300);
+      }
+    });
+    shadowObserver.observe(document.documentElement, { childList: true, subtree: true });
+  }
 
   /* НЕ додаємо MutationObserver на class/style!
      2026-11-23: спостерігач реагував на тисячі змін атрибутів Kleinanzeigen
@@ -280,7 +473,10 @@
   function setEnabled(on) {
     enabled = on;
     if (on) runDetection();
-    else strip();
+    else {
+      strip();
+      notifyFrames(false);
+    }
   }
 
   /* Початковий стан лежить у chrome.storage_local — ним керують окремо
@@ -293,5 +489,22 @@
 
   chrome.runtime.onMessage.addListener(function (msg) {
     if (msg && msg.type === 'haki-sites-changed') setEnabled(!!msg.enabled);
+  });
+
+  /* Домовленість між сторінкою та iframe: батько повідомляє, чи він
+     інвертує. Без цього вбудовані темні сайти ставали білими. */
+  window.addEventListener('message', function (e) {
+    var d = e && e.data;
+    if (!d || typeof d !== 'object') return;
+    if (inFrame && d.type === 'haki-frame-state') {
+      applyFrame(!!d.enabled);
+    } else if (!inFrame && d.type === 'haki-frame-request') {
+      try {
+        e.source.postMessage({
+          type: 'haki-frame-state',
+          enabled: enabled && root.classList.contains('haki-force-dark')
+        }, '*');
+      } catch (err) {}
+    }
   });
 })();
