@@ -1,4 +1,4 @@
-/* Haki OLED v3.2.0
+/* Haki OLED v3.3.1
    One toolbar button opens popup.html with TWO INDEPENDENT switches:
      1) browser theme -> chrome.management.setEnabled(THEME_ID, ...)
      2) site darkening -> chrome.storage.local['sitesEnabled']

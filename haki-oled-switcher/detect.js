@@ -11,6 +11,9 @@
   var root = document.documentElement;
   var SITES_KEY = 'sitesEnabled';
   var enabled = true;
+  /* Рішення липке: після перефарбування сірого сайту в #000 повторна
+     перевірка бачить уже чорний фон і без цього зняла б клас. */
+  var appliedMode = null;
   var inFrame = window.self !== window.top;
   var parentDark = null;
   var shadowStyleId = 'haki-shadow-media';
@@ -100,11 +103,121 @@
     fixedColors = [];
   }
 
+  /* === УНІВЕРСАЛЬНИЙ ШАР (v3.3) ===========================================
+     Багато сайтів не білі й не чорні, а СІРІ: #1f1f1f (jut.su), #161617
+     (Yandex), #222428 (Google), #222 (yummyani.me). Інверсія їх псує,
+     а старий детектор взагалі нічого не робив. Треба третій стан:
+     не інвертувати, а перефарбувати сірі поверхні в чистий #000 і
+     зробити текст щільним білим. Один прохід, без спостерігача атрибутів. */
+  var surfaceFixes = [];
+  function rgb(color) {
+    if (!color || color.indexOf('rgb') !== 0) return null;
+    var m = color.match(/[\d.]+/g);
+    if (!m || m.length < 3) return null;
+    return { r: +m[0], g: +m[1], b: +m[2], a: m.length > 3 ? +m[3] : 1 };
+  }
+  function gray(c) {
+    if (!c) return null;
+    var mx = Math.max(c.r, c.g, c.b), mn = Math.min(c.r, c.g, c.b);
+    return { mx: mx, mn: mn, spread: mx - mn, l: (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255 };
+  }
+  var SKIP_TAGS = /^(VIDEO|IMG|CANVAS|SVG|PICTURE|SOURCE|EMBED|OBJECT|IFRAME|SCRIPT|STYLE|NOSCRIPT)$/;
+
+  function applySurfaceFix(mode) {
+    if (!enabled) return;
+    var invert = mode === 'invert';
+    var cls = invert ? 'haki-force-dark' : 'haki-gray';
+    if (!root.classList.contains(cls)) return;
+    var els = document.querySelectorAll('body *');
+    for (var i = 0; i < els.length && i < 8000; i++) {
+      var el = els[i];
+      if (el.hasAttribute('data-haki-surface')) continue;
+      var isMedia = SKIP_TAGS.test(el.tagName);
+      /* IMG не чіпаємо вміст, але його сірий фон — це та сама сіра
+         плашка, що й у звичайного блоку (наприклад, постер yummyani.me). */
+      if (isMedia && el.tagName !== 'IMG') continue;
+      var s = getComputedStyle(el);
+      var bgRaw = rgb(s.backgroundColor);
+      var bg = gray(bgRaw);
+      var fgRaw = rgb(s.color);
+      var fg = gray(fgRaw);
+      var r = el.getBoundingClientRect();
+      if (r.width < 18 || r.height < 9) continue;
+      var changes = [];
+      var c;
+      /* Колір/вагу/прозорість міняємо ТІЛЬКИ на елементах із власним
+         текстом. Інакше opacity:1 знімає анімації й напівпрозорі серпанки
+         усього контейнера — це ламає вигляд Google/Yandex. */
+      var hasText = false;
+      if (!isMedia) {
+        var nodes = el.childNodes;
+        for (var k = 0; k < nodes.length; k++) {
+          if (nodes[k].nodeType === 3 && nodes[k].nodeValue && nodes[k].nodeValue.trim()) {
+            hasText = true;
+            break;
+          }
+        }
+      }
+
+      /* Сірі поверхні. На неінвертованих сайтах — просто в чорний.
+         На інвертованих — у білий ДО інверсії (після неї стане чорним). */
+      if (bg && bgRaw.a > 0.15 && bg.spread <= 16 && bg.mx >= 10 && bg.mx <= 110) {
+        /* Картинку/градієнт не чіпаємо — міняємо тільки колір тла під нею.
+           backdrop-filter лишаємо: він може бути частиною скляної панелі. */
+        if (!(s.backdropFilter && s.backdropFilter !== 'none')) {
+          c = { prop: 'background-color', val: invert ? '#ffffff' : '#000000' };
+          changes.push(c);
+        }
+      }
+
+      /* Сірий текст: тонкий, напівпрозорий або темно-сірий.
+         Інвертовані сайти: чорний ДО інверсії = білий після.
+         Сірі сайти: одразу щільний білий #eaeaea. */
+      if (hasText && fg && fg.spread <= 32) {
+        var needColor = false;
+        if (invert) {
+          needColor = fg.l > 0.12 || fgRaw.a < 0.92;
+          if (needColor) changes.push({ prop: 'color', val: '#000000' });
+        } else {
+          needColor = fg.l < 0.92 || fgRaw.a < 0.92;
+          if (needColor) changes.push({ prop: 'color', val: '#eaeaea' });
+        }
+        var op = parseFloat(s.opacity);
+        if (!isNaN(op) && op < 0.85) changes.push({ prop: 'opacity', val: '1' });
+        var w = parseInt(s.fontWeight, 10);
+        if (!isNaN(w) && w > 0 && w < 400) changes.push({ prop: 'font-weight', val: '400' });
+      }
+
+      if (!changes.length) continue;
+      var saved = { el: el };
+      for (var j = 0; j < changes.length; j++) {
+        c = changes[j];
+        saved[c.prop] = el.style.getPropertyValue(c.prop);
+        el.style.setProperty(c.prop, c.val, 'important');
+      }
+      surfaceFixes.push(saved);
+      el.setAttribute('data-haki-surface', '1');
+    }
+  }
+
+  function restoreSurfaceFix() {
+    for (var i = 0; i < surfaceFixes.length; i++) {
+      var f = surfaceFixes[i];
+      ['background-color', 'color', 'opacity', 'font-weight'].forEach(function (prop) {
+        f.el.style.removeProperty(prop);
+        if (f[prop]) f.el.style.setProperty(prop, f[prop]);
+      });
+      f.el.removeAttribute('data-haki-surface');
+    }
+    surfaceFixes = [];
+  }
+
   /* Зняття затемнення: наші CSS працюють ТІЛЬКИ під цими класами,
      тому достатньо прибрати класи й вставлені <style>. Сторінку не перезавантажуємо. */
   function strip() {
     restoreColors();
-    root.classList.remove('haki-force-dark', 'haki-youtube', 'haki-twitch', 'haki-rezka',
+    restoreSurfaceFix();
+    root.classList.remove('haki-force-dark', 'haki-gray', 'haki-youtube', 'haki-twitch', 'haki-rezka',
       'haki-frame-media', 'haki-frame-native');
     ['haki-youtube-oled', 'haki-twitch-oled'].forEach(function (id) {
       var el = document.getElementById(id);
@@ -275,22 +388,29 @@
       'html.haki-twitch [class*="side-nav"],',
       'html.haki-twitch [class*="channel-root__left-column"],',
       'html.haki-twitch [class*="channel-root__right-column"],',
-      'html.haki-twitch [class*="chat-room"],',
+      /* НЕ чіпаємо `[class*="chat-room"]` цілком! до нього входить
+         `chat-room__viewer-card` — невидимий шар профілю користувача з
+         `pointer-events:none`, що займає ВЕСЬ чат. Якщо дати йому чорне
+         тло, він перекриває всі повідомлення (DOM є, а око нічого не бачить). */
+      'html.haki-twitch section[class*="chat-room"],',
+      'html.haki-twitch [class*="chat-room__content"],',
       'html.haki-twitch [class*="chat-wysiwyg"],',
       'html.haki-twitch [class*="chat-input"] { background-color: #000 !important; }',
+      'html.haki-twitch [class*="chat-room__viewer-card"],',
+      'html.haki-twitch [class*="chat-room__notifications"],',
+      'html.haki-twitch [class*="celebration__overlay"] { background-color: transparent !important; }',
       'html.haki-twitch [class*="side-nav-card"] { background-color: #000 !important; }',
       'html.haki-twitch [class*="side-nav-card"]:hover,',
       'html.haki-twitch [class*="side-nav-card"]:focus { background-color: #0a0a0a !important; }',
-      /* Текст повідомлень — світло-сірий; кольори імен, емодзі й посилань
-         лишаємо недоторканими (вони задані на дочірніх елементах). */
-      'html.haki-twitch [class*="chat-line__message"],',
-      'html.haki-twitch [class*="chat-message"],',
-      'html.haki-twitch [data-test-selector="chat-line"] {',
-      '  background-color: transparent !important; color: #d3d3d9 !important;',
-      '}',
-      'html.haki-twitch [class*="chat-line__body"],',
-      'html.haki-twitch [class*="message-body"],',
-      'html.haki-twitch [class*="chat-message-text"] { color: #d3d3d9 !important; }'
+      /* НЕ перекриваємо кольори в чаті! v3.2.0 ставила #d3d3d9 на всі
+         дочірні елементи — імена, емодзі й посилання злились в одну сіру
+         масу, а на деяких стрімах чат виглядав порожньою чорною панеллю.
+         Лишаємо рідні кольори Twitch недоторканими. Тільки трохи
+         збільшуємо вагу тексту, щоб він не був «прозорим». */
+      'html.haki-twitch [class*="chat-line__message"] {',
+      '  background-color: transparent !important;',
+      '  font-weight: 400 !important; opacity: 1 !important;',
+      '}'
     ].join('\n');
     var style = document.createElement('style');
     style.id = 'haki-twitch-oled';
@@ -385,11 +505,13 @@
     var samples = backgrounds().concat(vis);
     var isLight = samples.some(function (c) {
       var l = luminance(c);
-      return l !== null && l > 0.55;
+      return l !== null && l > 0.58;
     });
-    var isDark = vis.length > 0 && vis.every(function (c) {
+    /* Сірі сайти: фон не білий, але й не чорний (#161617 … #555).
+       Їх не інвертуємо — просто перефарбовуємо поверхні в #000. */
+    var isGray = vis.length > 0 && vis.every(function (c) {
       var l = luminance(c);
-      return l !== null && l < 0.25;
+      return l !== null && l >= 0.02 && l <= 0.36;
     });
 
     /* Якщо непрозорого фону не знайдено, браузер малює біле полотно —
@@ -398,15 +520,21 @@
 
     if (isLight || fallbackLight) {
       var wasOn = root.classList.contains('haki-force-dark');
+      root.classList.remove('haki-gray');
       root.classList.add('haki-force-dark');
+      appliedMode = 'force';
       if (!wasOn) normalizeColors();
       injectShadowStyles();
-    } else if (schemeDark && (isDark || vis.length === 0)) {
-      /* Сайт справді темний — інверсія не потрібна. */
+    } else if (isGray || appliedMode === 'gray') {
+      var wasGray = root.classList.contains('haki-gray');
       root.classList.remove('haki-force-dark');
-    } else if (final) {
-      root.classList.remove('haki-force-dark');
+      root.classList.add('haki-gray');
+      appliedMode = 'gray';
+      if (!wasGray) applySurfaceFix('gray');
+    } else if (final && !appliedMode) {
+      root.classList.remove('haki-force-dark', 'haki-gray');
     }
+    if (root.classList.contains('haki-force-dark') && final) applySurfaceFix('invert');
     notifyFrames(root.classList.contains('haki-force-dark'));
   }
 
@@ -421,7 +549,18 @@
     if (!enabled) return;
     loaded = true;
     evaluate(true);
-    window.setTimeout(normalizeColors, 1200);
+    window.setTimeout(function () {
+      if (root.classList.contains('haki-force-dark')) {
+        normalizeColors();
+        applySurfaceFix('invert');
+      } else if (root.classList.contains('haki-gray')) {
+        applySurfaceFix('gray');
+      }
+    }, 1400);
+    window.setTimeout(function () {
+      if (root.classList.contains('haki-gray')) applySurfaceFix('gray');
+      else if (root.classList.contains('haki-force-dark')) applySurfaceFix('invert');
+    }, 4500);
   }
 
   if (document.readyState === 'loading') {
@@ -474,6 +613,7 @@
     enabled = on;
     if (on) runDetection();
     else {
+      appliedMode = null;
       strip();
       notifyFrames(false);
     }

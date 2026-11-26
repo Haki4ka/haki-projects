@@ -29,6 +29,27 @@ html.haki-force-dark [style*="background-image"] {
   filter: invert(1) hue-rotate(180deg) contrast(0.625) !important;
 }
 
+/* v3.3 — сірі сайти (jut.su, Yandex, Google, yummyani.me та ін.).
+   Їх НЕ інвертуємо: інверсія зіпсувала б кольори й зробила темно-сірі
+   поверхні білими. Натомість detect.js перефарбовує сірі блоки в #000
+   і робить текст щільним білим. Тут лише база для політності. */
+html.haki-gray {
+  background-color: #000000 !important;
+  color: #eaeaea !important;
+}
+html.haki-gray body {
+  background-color: #000000 !important;
+  color: #eaeaea !important;
+}
+html.haki-gray input,
+html.haki-gray textarea,
+html.haki-gray select {
+  color-scheme: dark !important;
+  background-color: #000000 !important;
+  color: #eaeaea !important;
+}
+/* Медіа на сірих сайтах лишаємо рідними — ніякої інверсії. */
+
 /* Вміст iframe: батько вже інвертує всю поверхню, тому тут інвертуємо
    тільки медіа, щоб відео всередині не мало перевернутих кольорів. */
 html.haki-frame-media img,
