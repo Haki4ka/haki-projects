@@ -1,4 +1,4 @@
-/* Haki Shield — Twitch in-stream ad removal (v1.5.1).
+/* Haki Shield — Twitch in-stream ad removal (v1.8.0).
    Our own implementation. Twitch fetches HLS playlists inside a blob Worker,
    so the hook must be installed BEFORE that worker's importScripts() runs.
    A bounded ad break is removed from the playlist; otherwise ad URLs are
