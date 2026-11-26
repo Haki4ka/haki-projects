@@ -57,15 +57,25 @@
     var ended = false;
     var changed = false;
     var removed = 0;
-    var liveUri = null;
-    var liveInf = null;
-    var livePdt = null;
+    /* A pre-roll has no live segment before it in the playlist. Reuse the
+       last known live segment from an earlier refresh instead of leaving the
+       ad in place (that is what produced a 30-second stall). */
+    var liveUri = (typeof self !== 'undefined' && self.__hakiLiveUri) || null;
+    var liveInf = (typeof self !== 'undefined' && self.__hakiLiveInf) || null;
+    var livePdt = (typeof self !== 'undefined' && self.__hakiLivePdt) || null;
     var adSeen = 0;
     var adSlots = [];
 
+    function cacheKey(uri) {
+      try {
+        var u = new URL(uri, self.location ? self.location.href : undefined);
+        return u.origin + u.pathname;
+      } catch (e) { return uri; }
+    }
+
     function remember(uri) {
       if (!uri || /^#/.test(uri)) return;
-      try { cache[uri] = { t: Date.now() }; } catch (e) { void e; }
+      try { cache[cacheKey(uri)] = { t: Date.now(), uri: uri }; } catch (e) { void e; }
       removed++;
       if (typeof self.postMessage === 'function' && self.__hakiShieldReport) {
         self.postMessage({ __hakiAdUri: uri });
@@ -146,7 +156,11 @@
     }
 
     if (liveUri) {
-      try { self.__hakiLiveUri = liveUri; } catch (e) { void e; }
+      try {
+        self.__hakiLiveUri = liveUri;
+        self.__hakiLiveInf = liveInf;
+        self.__hakiLivePdt = livePdt;
+      } catch (e) { void e; }
       if (typeof self.postMessage === 'function' && self.__hakiShieldReport) {
         self.postMessage({ __hakiLiveUri: liveUri });
       }
@@ -229,9 +243,15 @@
       });
     }, 60000);
 
-    function isCached(url) {
-      var hit = self.__hakiCache[url];
-      return !!(hit && Date.now() - hit.t < 30000);
+    function cacheKey(url) {
+      try {
+        var u = new URL(url, self.location && self.location.href);
+        return u.origin + u.pathname;
+      } catch (e) { return url; }
+    }
+    function cachedHit(url) {
+      var hit = self.__hakiCache[url] || self.__hakiCache[cacheKey(url)];
+      return hit && Date.now() - hit.t < 30000 ? hit : null;
     }
     function cleanUrl(url) {
       try {
@@ -252,9 +272,10 @@
         try { self.postMessage({ __hakiShieldStats: true, adRequests: 1 }); } catch (e) { void e; }
         return Promise.resolve(new Response(null, { status: 204 }));
       }
-      if (isCached(url)) {
+      var adHit = cachedHit(url);
+      if (adHit) {
         var live = self.__hakiLiveUri;
-        if (live && live !== url) {
+        if (live && live !== adHit.uri && live !== url) {
           return originalFetch.call(self, live, init).catch(function () {
             return new Response(self.__hakiBlank(), {
               status: 200, headers: { 'content-type': 'video/mp2t' }
@@ -342,6 +363,7 @@
 
   function workerHookPage() {
     var patchedFetch = window.fetch;
+    var pageCache = Object.create(null);
     var backupType = null;
     var backupAt = 0;
     /* mobile_web is deliberately excluded: mobile tokens can cap quality at
@@ -399,6 +421,27 @@
       }
 
       var promise = patchedFetch.call(this, input, init);
+
+      /* Some player builds read playlists on the main thread instead of the
+         blob worker. Clean those too, with the same universal routine. */
+      if (videoEnabled && /\.m3u8(\?|$)/i.test(url)) {
+        return promise.then(function (res) {
+          if (!res || !res.clone) return res;
+          return res.clone().text().then(function (text) {
+            var clean = cleanHls(text, pageCache, stats);
+            if (clean === text) return res;
+            var headers = new Headers(res.headers);
+            ['content-length', 'content-encoding', 'etag', 'last-modified', 'transfer-encoding'].forEach(function (h) {
+              try { headers.delete(h); } catch (err) { void err; }
+            });
+            try { headers.set('content-type', 'application/vnd.apple.mpegurl'); } catch (err) { void err; }
+            return new Response(clean, {
+              status: res.status, statusText: res.statusText, headers: headers
+            });
+          }).catch(function () { return res; });
+        });
+      }
+
       if (!isToken) return promise;
 
       /* popout alone no longer clears server ads. Ask for a different player
@@ -456,6 +499,17 @@
       if (enabled && /gql\.twitch\.tv\/gql/i.test(this.__hakiUrl || '') && typeof body === 'string') {
         var next = rewriteToken(body);
         if (next !== body) { body = next; stats.tokens++; }
+      }
+      if (videoEnabled && /\.m3u8(\?|$)/i.test(this.__hakiUrl || '')) {
+        this.addEventListener('load', function () {
+          try {
+            var text = xhr.responseText;
+            var clean = cleanHls(text, pageCache, stats);
+            if (clean !== text) {
+              Object.defineProperty(xhr, 'responseText', { configurable: true, get: function () { return clean; } });
+            }
+          } catch (e) { void e; }
+        });
       }
       if (videoEnabled && isPageAd(this.__hakiUrl)) {
         this.addEventListener('load', function () {
@@ -547,16 +601,25 @@
   try { Object.setPrototypeOf(window.Worker, OriginalWorker); } catch (e) { void e; }
 
   window.addEventListener('message', function (e) {
-    if (e.source !== window || !e.data || e.data.source !== 'haki-shield' || e.data.type !== 'config') return;
-    enabled = e.data.master !== false && !e.data.siteOff;
-    videoEnabled = enabled && e.data.videoAds !== false;
+    if (e.source !== window || !e.data) return;
+    var d = e.data;
+    /* cleanHls() also runs on the main thread now; accept its local notices. */
+    if (d.__hakiAdUri) {
+      var uri = d.__hakiAdUri;
+      if (!pageAdUris[uri]) { pageAdUris[uri] = { t: Date.now() }; reportBlocked(1); }
+      else pageAdUris[uri].t = Date.now();
+    }
+    if (d.__hakiLiveUri) pageLiveUri = d.__hakiLiveUri;
+    if (d.source !== 'haki-shield' || d.type !== 'config') return;
+    enabled = d.master !== false && !d.siteOff;
+    videoEnabled = enabled && d.videoAds !== false;
     for (var i = 0; i < workers.length; i++) {
       try { workers[i].postMessage({ __hakiShieldConfig: true, enabled: videoEnabled }); } catch (err) { void err; }
     }
   });
 
   window.__hakiShield = {
-    version: '1.7.0',
+    version: '1.8.0',
     stats: stats,
     cleanHls: cleanHls,
     adUris: pageAdUris,
