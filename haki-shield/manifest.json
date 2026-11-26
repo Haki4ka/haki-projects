@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "Haki Shield — Ad Blocker",
+  "short_name": "Haki Shield",
+  "version": "1.6.0",
+  "description": "Our own blocker: network ads, banners, Twitch stream ads and an opt-in universal filter layer. Made by Haki.",
+  "permissions": [
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
+    "storage"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ads",
+        "enabled": false,
+        "path": "rules.json"
+      },
+      {
+        "id": "universal",
+        "enabled": false,
+        "path": "universal.json"
+      }
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.twitch.tv/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    },
+    {
+      "matches": ["*://*.twitch.tv/*"],
+      "js": ["twitch.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": false
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["cosmetic.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_title": "Haki Shield — Ad Blocker",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

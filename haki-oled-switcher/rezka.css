@@ -1,0 +1,161 @@
+/* Haki OLED — окремий режим для Rezka (rezka-ua.pub та дзеркала).
+   Проблема: сайт має власну «нічну» тему з темно-синім фоном rgb(9,22,28).
+   Наша звичайна інверція перетворювала його на яскраво-білий.
+   Рішення:
+   - у ДЕННІЙ темі інвертуємо <body> з додатковим contrast(1.2):
+     сірий #efefef стає чистим #000, а не #101010, як раніше;
+   - у НІЧНІЙ темі інверцію вимикаємо зовсім і перекриваємо темно-сині
+     фони сайту на чорні. Акцентні кольори (бірюзовий, червоний) лишаємо.
+   Перемикання відбувається саме через CSS-клас body, без JS-спостерігачів. */
+
+html.haki-rezka body:not(.b-theme__template__night) {
+  filter: invert(1) hue-rotate(180deg) contrast(1.2) !important;
+  background-color: #ffffff !important;
+  color: #373737 !important;
+}
+
+html.haki-rezka body:not(.b-theme__template__night) img,
+html.haki-rezka body:not(.b-theme__template__night) video,
+html.haki-rezka body:not(.b-theme__template__night) canvas,
+html.haki-rezka body:not(.b-theme__template__night) svg,
+html.haki-rezka body:not(.b-theme__template__night) picture,
+html.haki-rezka body:not(.b-theme__template__night) iframe,
+html.haki-rezka body:not(.b-theme__template__night) embed,
+html.haki-rezka body:not(.b-theme__template__night) object,
+html.haki-rezka body:not(.b-theme__template__night) [style*="background-image"] {
+  filter: invert(1) hue-rotate(180deg) contrast(1.2) !important;
+}
+
+/* ДЕННА тема — плеєр (PlayerJS).
+   Контейнер #oframecdnplayer і панель керування мають темні фони.
+   Загальна інверція <body> перетворювала їх на білі. Тут ми повністю
+   скасовуємо дію фільтра <body> всередині #player, а медіа (відео,
+   картинки, іконки) лишаємо без додаткової інверції — вони отримують
+   рівно два перетворення (body + player), тобто виглядають природно. */
+html.haki-rezka body:not(.b-theme__template__night) #player {
+  filter: invert(1) hue-rotate(180deg) contrast(0.8333) !important;
+}
+html.haki-rezka body:not(.b-theme__template__night) #player video,
+html.haki-rezka body:not(.b-theme__template__night) #player img,
+html.haki-rezka body:not(.b-theme__template__night) #player canvas,
+html.haki-rezka body:not(.b-theme__template__night) #player svg,
+html.haki-rezka body:not(.b-theme__template__night) #player picture,
+html.haki-rezka body:not(.b-theme__template__night) #player iframe,
+html.haki-rezka body:not(.b-theme__template__night) #player embed,
+html.haki-rezka body:not(.b-theme__template__night) #player object,
+html.haki-rezka body:not(.b-theme__template__night) #player [style*="background-image"] {
+  filter: none !important;
+}
+
+/* Нічна тема сайту: темно-сині фони -> чорні. */
+html.haki-rezka body.b-theme__template__night { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .tumbler__wrapper { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .medium-editor-element { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .b-tophead-notifications-dropdown::before { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-tophead-notifications-dropdown-inner { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night a.b-tophead-all-notifications { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-userset__fav_holder { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-tophead-notifications span { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .b-person__career_more { background-color: #101010 !important; }
+html.haki-rezka body.b-theme__template__night .b-person__popup_photo { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-post__qa_list_link { background-color: #101010 !important; }
+html.haki-rezka body.b-theme__template__night .b-post__qa_list_link:hover { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-content__inline_item .cat.loading { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-comment__act_label { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .text_spoiler { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-content__inline_item .hd-label-row input[type="checkbox"] + label { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-content__inline_item.active .cat { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-rgstats__list_item { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-rgstats__list_item .inner .bar { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .admin-schedule-row-hidden { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .b-popup { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night.has-brand #wrapper { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .b-footer,
+html.haki-rezka body.b-theme__template__night .b-tophead_wrapper { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .b-topnav_wrapper { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-tophead-dropdown ul { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-tophead-dropdown.hovered { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-tophead__subscribe-dropdown-list { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-tophead__subscribe-dropdown-list::before { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-tophead-lang-dropdown { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-tophead-lang-dropdown::before { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-topnav__sub_inner { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-search__form,
+html.haki-rezka body.b-theme__template__night .b-search__field,
+html.haki-rezka body.b-theme__template__night .b-search__live { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-content__inline_item.active .cat:hover,
+html.haki-rezka body.b-theme__template__night .b-content__inline_item:hover .cat:hover { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-content__bubble.right .arrow i { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-content__bubble.left .arrow i { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-newest_slider_wrapper,
+html.haki-rezka body.b-theme__template__night .b-newest_slider,
+html.haki-rezka body.b-theme__template__night .b-newest_slider__list { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .b-content__bubble { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-content__inline_item .info { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-content__inline_item-cover { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-collections__newest { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .b-seriesupdate__block_date { background-color: #101010 !important; }
+html.haki-rezka body.b-theme__template__night .b-seriesupdate__block_date.collapsible.expandable { background-color: #101010 !important; }
+html.haki-rezka body.b-theme__template__night .b-seriesupdate__block_list_item { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .tooltipster-default { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-field,
+html.haki-rezka body.b-theme__template__night .b-addcomment .b-field,
+html.haki-rezka body.b-theme__template__night .b-user__settings .b-field,
+html.haki-rezka body.b-theme__template__night .b-userset__fav_addcat_editor .field,
+html.haki-rezka body.b-theme__template__night .tableform_page .b-area,
+html.haki-rezka body.b-theme__template__night .tableform_page .b-field { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night select#subject,
+html.haki-rezka body.b-theme__template__night .b-select { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .b-post__schedule_block_title { background-color: #101010 !important; }
+html.haki-rezka body.b-theme__template__night .b-post__schedule_more { background-color: #101010 !important; }
+html.haki-rezka body.b-theme__template__night.active-brand #hd-comments-list > .comments-tree-list .comments-tree-list,
+html.haki-rezka body.b-theme__template__night #hd-comments-list > .comments-tree-list .comments-tree-list { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .b-favorites_content__cats_list_item .b-favorites_content__cats_list_link { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-favorites_content__cats_list_item .b-favorites_content__cats_list_link.active { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .sod_select { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .sod_list_wrapper { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .b-post__direct_download-dropdown-list-inner { background-color: #0a0a0a !important; }
+html.haki-rezka body.b-theme__template__night .b-hd_prem #top-head { background-color: #000000 !important; }
+html.haki-rezka body.b-theme__template__night .b-hd_prem .b-tophead.b-wrapper { background-color: #000000 !important; }
+
+/* Текст у нічній темі м'якший за чисто білий — приємніше для OLED. */
+html.haki-rezka body.b-theme__template__night { color: #c8c8c8 !important; }
+
+/* ДЕННА тема: деякі блоки сайту самі пофарбовані в темний колір
+   (шапка #313131, футер і активні фільтри #000). Після інверсії вони
+   ставали світлими. Тут ми готуємо їх до інверсії: біле тло -> чорне,
+   темний текст -> світлий. Перемикач теми лишається видимим. */
+html.haki-rezka body:not(.b-theme__template__night) .b-tophead_wrapper {
+  background-color: #ffffff !important;
+  color: #373737 !important;
+}
+html.haki-rezka body:not(.b-theme__template__night) .b-footer {
+  background-color: #ffffff !important;
+  color: #373737 !important;
+}
+html.haki-rezka body:not(.b-theme__template__night) .tumbler__wrapper {
+  background-color: #ffffff !important;
+}
+html.haki-rezka body:not(.b-theme__template__night) .tumbler {
+  background-color: #373737 !important;
+}
+html.haki-rezka body:not(.b-theme__template__night) .b-content__main_filters_link.active,
+html.haki-rezka body:not(.b-theme__template__night) .b-content__filters_types .filter-link.active,
+html.haki-rezka body:not(.b-theme__template__night) .b-tabs__main_link.active,
+html.haki-rezka body:not(.b-theme__template__night) .b-favorites_content__cats_list_link.active {
+  background-color: #ffffff !important;
+  color: #373737 !important;
+}
+
+/* ДЕННА тема: плашка вибору озвучки/перекладу над плеєром.
+   Темні значення «до інверсії» дають чистий чорний після фільтра <body>.
+   Колір тексту не змінюємо — він і так читається. Нічну тему не чіпаємо. */
+html.haki-rezka body:not(.b-theme__template__night) .b-translators__block {
+  background-color: #151515 !important;
+}
+html.haki-rezka body:not(.b-theme__template__night) .b-translator__item {
+  background-color: #2d2d2d !important;
+}
+html.haki-rezka body:not(.b-theme__template__night) .b-translator__item.active {
+  background-color: #3d3d3d !important;
+}

@@ -1,0 +1,15 @@
+{
+  "name": "haki-lab-rule-checks",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Typed checks for Haki Shield declarativeNetRequest rulesets",
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "verify": "tsc --noEmit && tsc --outDir dist && node dist/verify-rules.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}

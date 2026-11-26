@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "Haki OLED — Sites + Theme",
+  "short_name": "Haki OLED",
+  "version": "3.1.0",
+  "description": "One compact menu with two independent switches: deep black Brave theme and site darkening. Local extension by Haki.",
+  "permissions": ["management", "storage", "contextMenus"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": ["dark-websites.css"],
+      "js": ["detect.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "*://rezka-ua.pub/*",
+        "*://*.rezka-ua.pub/*",
+        "*://rezka.ag/*",
+        "*://*.rezka.ag/*",
+        "*://rezka.is/*",
+        "*://*.rezka.is/*",
+        "*://rezka.me/*",
+        "*://*.rezka.me/*"
+      ],
+      "css": ["rezka.css"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "commands": {
+    "toggle_sites": {
+      "suggested_key": {
+        "default": "Alt+Shift+D"
+      },
+      "description": "Toggle both Haki OLED themes at once"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "action": {
+    "default_title": "Haki OLED — control",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icon48.png"
+    }
+  },
+  "icons": {
+    "128": "icon128.png"
+  }
+}

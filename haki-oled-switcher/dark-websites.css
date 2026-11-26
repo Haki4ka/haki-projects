@@ -1,0 +1,27 @@
+/* Haki OLED — примусове затемнення сайтів.
+   Біле тло -> чистий чорний (#000000), текст -> світлий.
+   Картинки й відео інвертуємо вдруге, щоб лишались природними.
+   Стиль застосовується тільки якщо detect.js виявив світлу сторінку. */
+
+html.haki-force-dark {
+  background-color: #FFFFFF !important; /* після інверсії стає #000000 */
+  filter: invert(1) hue-rotate(180deg) !important;
+}
+
+html.haki-force-dark img,
+html.haki-force-dark video,
+html.haki-force-dark canvas,
+html.haki-force-dark svg,
+html.haki-force-dark picture,
+html.haki-force-dark iframe,
+html.haki-force-dark embed,
+html.haki-force-dark object,
+html.haki-force-dark [style*="background-image"] {
+  filter: invert(1) hue-rotate(180deg) !important;
+}
+
+/* НЕ додаємо color-scheme: dark для полів вводу!
+   Була помилка (2026-11-23): браузер робив поле сірим (#3B3B3B) ще ДО
+   інверсії, а після неї воно ставало світло-сірим/білим — саме тому пошук
+   на Kleinanzeigen виглядав синьо-білим. Без цього правила біле поле
+   інвертується в чорне, а темний текст — у світлий. */

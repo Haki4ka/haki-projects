@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Haki OLED — Options</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; padding: 28px; background: #000; color: #f1f1f1;
+      font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+      max-width: 620px;
+    }
+    h1 { font-size: 20px; margin: 0 0 18px; }
+    .row {
+      display: flex; align-items: center; gap: 14px;
+      background: #0a0a0a; border: 1px solid #222; border-radius: 10px;
+      padding: 18px 20px;
+    }
+    input[type="checkbox"] { width: 22px; height: 22px; accent-color: #9147ff; cursor: pointer; }
+    label { cursor: pointer; font-weight: 600; }
+    #state { color: #3ea6ff; }
+    p { color: #b8b8b8; }
+    code { color: #d9d9d9; background: #141414; padding: 2px 5px; border-radius: 4px; }
+    .note { margin-top: 20px; border-left: 3px solid #9147ff; padding-left: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Haki OLED — Options</h1>
+
+  <div class="row">
+    <input type="checkbox" id="sitesEnabled">
+    <label for="sitesEnabled">Site darkening</label>
+    <span id="state">checking…</span>
+  </div>
+
+  <p>When off, websites are left as they are. This does not affect the black Brave theme.</p>
+
+  <p class="note">
+    Main controls are in the compact menu: click the <strong>H</strong> button on the Brave toolbar —
+    there are two independent switches (browser theme and site darkening).<br>
+    This page is a secondary option. You can also right-click a page →
+    <em>Haki OLED: disable/enable site darkening</em>, or press <code>Alt+Shift+D</code>.
+    That hotkey now turns <strong>both</strong> themes on together, and pressing it again turns both off.
+    You can change the shortcut in <code>brave://extensions/shortcuts</code>.
+  </p>
+
+  <script src="options.js"></script>
+</body>
+</html>
