@@ -1,4 +1,4 @@
-/* Haki Shield v1.6.0 — our own blocker.
+/* Haki Shield v1.6.1 — our own blocker.
    All logic here is written by us; no foreign extension code is used. */
 
 const DEFAULTS = {

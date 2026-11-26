@@ -556,7 +556,7 @@
   });
 
   window.__hakiShield = {
-    version: '1.6.0',
+    version: '1.6.1',
     stats: stats,
     cleanHls: cleanHls,
     adUris: pageAdUris,

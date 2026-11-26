@@ -11,13 +11,13 @@ This file records the one external data source we convert at build time.
 - **Our election: CC BY-SA 3.0-or-later** for the derived data file `universal.json`.
   We choose the Creative Commons arm so our own extension code stays ours.
 - Required attribution: "The EasyList authors (easylist.to/)".
-- Source SHA-256 at last build: `b62d2256ac6c228ec0f5069dced47e8ca74f67eaef7173c721d17d4be83b44bf`
+- Source SHA-256 at last build: `a3cddc45e939d1906df0b71425ca54e754220d536a647de2831590ac14c5966e`
 - Rules emitted: 25000
-- Built: 2026-11-25T22:48:17.165Z
+- Built: 2026-11-26T00:26:26.306Z
 
 ### Upstream notice (verbatim header lines)
 
-> ! Version: 202611252237
+> ! Version: 202611260020
 > ! Title: EasyList
 > ! Homepage: https://easylist.to/
 > ! Licence: https://easylist.to/pages/licence.html

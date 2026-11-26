@@ -6,7 +6,7 @@ for two jobs:
 1. ordinary network blocking with declarative rules;
 2. removing ads that are stitched into a live Twitch HLS stream.
 
-Version 1.6.0.
+Version 1.6.1. See `CHANGELOG.md` for the full history.
 
 ## What is inside
 
@@ -36,10 +36,21 @@ Extensions page → developer mode → **Load unpacked** → select this folder.
 After changing `manifest.json`, use **Update** and then **Reload** on the
 extension card.
 
+## EasyList refresh
+
+MV3 static rulesets are read at extension load time, so a rebuilt
+`universal.json` only takes effect with a new extension version. The repository
+ships `tools/update-easylist.mjs`, which fetches the public EasyList URL,
+compares SHA-256, backs up the current files, rebuilds, validates the limits and
+bumps the version. `tools/run-easylist-update.ps1` is the task-scheduler wrapper
+with a seven-day guard against double bumps. Nothing is written when the
+upstream hash is unchanged.
+
 ## Development
 
-`tools/build-filters.mjs` regenerates `universal.json` from a local EasyList
-copy. Keep the 25 000-rule cap and the protected-domain exclusions.
+`tools/build-filters.mjs` regenerates `universal.json` from the public EasyList
+URL. Keep the 25 000-rule cap, the 1 000-regex cap and the protected-domain
+exclusions; a failed validation leaves the previous ruleset intact.
 
 ## License
 

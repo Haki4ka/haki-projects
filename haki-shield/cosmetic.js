@@ -1,4 +1,4 @@
-/* Haki Shield v1.6.0 — banner hiding. Our own CSS, nothing imported. */
+/* Haki Shield v1.6.1 — banner hiding. Our own CSS, nothing imported. */
 
 (function () {
   'use strict';
@@ -9,7 +9,7 @@
     '[id^="google_ads_iframe"], [id^="div-gpt-ad"], [id^="ad_iframe"], [data-ad-slot] { display:none !important; }',
     '.adsbygoogle, .ad-banner, .ads-banner, .banner-ad, .advertisement, [aria-label="Advertisement"], [aria-label="Ad"] { display:none !important; }',
     '[class~="ad-container"], [id~="ad-container"], [class*="advertisement-wrapper"] { display:none !important; }',
-    /* v1.6.0 — a few structural, high-confidence ad placeholders only.
+    /* v1.6.1 — a few structural, high-confidence ad placeholders only.
        No wholesale import of public cosmetic filters: those break layouts. */
     'iframe[src*="googleadservices.com"], iframe[src*="adnxs.com"], iframe[src*="amazon-adsystem.com"] { display:none !important; }',
     'ins[data-ad-client], [data-ad-format] { display:none !important; }',

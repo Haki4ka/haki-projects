@@ -1,0 +1,17 @@
+{
+  "url": "https://easylist.to/easylist/easylist.txt",
+  "sha256": "a3cddc45e939d1906df0b71425ca54e754220d536a647de2831590ac14c5966e",
+  "rules": 25000,
+  "version": "1.6.1",
+  "builtAt": "2026-11-26T00:26:26.362Z",
+  "lastCheck": "2026-11-26T00:26:26.362Z",
+  "lastCheckResult": "UPDATED",
+  "history": [
+    {
+      "at": "2026-11-26T00:26:26.362Z",
+      "sha256": "a3cddc45e939d1906df0b71425ca54e754220d536a647de2831590ac14c5966e",
+      "version": "1.6.1",
+      "rules": 25000
+    }
+  ]
+}
