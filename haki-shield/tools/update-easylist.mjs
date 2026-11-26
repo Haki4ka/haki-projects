@@ -39,7 +39,7 @@ const MANIFEST = path.join(ROOT, 'manifest.json');
 const README = path.join(ROOT, 'README.md');
 
 const VERSION_FILES = [
-  'manifest.json', 'background.js', 'twitch.js', 'cosmetic.js',
+  'manifest.json', 'background.js', 'twitch.js', 'cosmetic.js', 'player.js',
   'popup.html', 'options.html'
 ];
 

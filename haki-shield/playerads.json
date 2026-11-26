@@ -1,0 +1,102 @@
+[
+  {
+    "id": 40000,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "regexFilter": "^https?://[^/]+/do2/[0-9a-f]{8,}/",
+      "resourceTypes": ["xmlhttprequest", "script", "image", "sub_frame", "other"],
+      "excludedInitiatorDomains": ["twitch.tv", "tradingview.com", "youtube.com", "kleinanzeigen.de"]
+    }
+  },
+  {
+    "id": 40001,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "regexFilter": "^https?://[^/]+/vast([?#]|$)",
+      "resourceTypes": ["xmlhttprequest", "script", "sub_frame", "other"],
+      "excludedInitiatorDomains": ["twitch.tv", "tradingview.com", "youtube.com", "kleinanzeigen.de"]
+    }
+  },
+  {
+    "id": 40002,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "regexFilter": "/(adtag|vasttag|vmap)([/?#]|$)",
+      "resourceTypes": ["xmlhttprequest", "script", "media", "sub_frame", "other"],
+      "excludedInitiatorDomains": ["twitch.tv", "tradingview.com", "youtube.com", "kleinanzeigen.de"]
+    }
+  },
+  {
+    "id": 40003,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "regexFilter": "/api/models/vsat/",
+      "resourceTypes": ["xmlhttprequest", "script", "other"],
+      "excludedInitiatorDomains": ["twitch.tv", "tradingview.com", "youtube.com", "kleinanzeigen.de"]
+    }
+  },
+  {
+    "id": 40004,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "regexFilter": "/smartpop/",
+      "resourceTypes": ["script", "xmlhttprequest", "image", "sub_frame", "other"],
+      "excludedInitiatorDomains": ["twitch.tv", "tradingview.com", "youtube.com", "kleinanzeigen.de"]
+    }
+  },
+  {
+    "id": 40005,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "regexFilter": "/sdk/v1/(ms|dd[.]p)[.]js([?#]|$)",
+      "resourceTypes": ["script"],
+      "excludedInitiatorDomains": ["twitch.tv", "tradingview.com", "youtube.com", "kleinanzeigen.de"]
+    }
+  },
+  {
+    "id": 40006,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "regexFilter": "/creatives/(bar|native)/",
+      "resourceTypes": ["script", "image", "sub_frame", "other"],
+      "excludedInitiatorDomains": ["twitch.tv", "tradingview.com", "youtube.com", "kleinanzeigen.de"]
+    }
+  },
+  {
+    "id": 40007,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "regexFilter": "/video/ol_[0-9a-f]{12,}[.]mp4([?#]|$)",
+      "resourceTypes": ["media"],
+      "excludedInitiatorDomains": ["twitch.tv", "tradingview.com", "youtube.com", "kleinanzeigen.de"]
+    }
+  },
+  {
+    "id": 40008,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "regexFilter": "/(pre|mid|post)roll([/_.-]|$)",
+      "resourceTypes": ["media", "xmlhttprequest", "script", "sub_frame"],
+      "excludedInitiatorDomains": ["twitch.tv", "tradingview.com", "youtube.com", "kleinanzeigen.de"]
+    }
+  },
+  {
+    "id": 40009,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "regexFilter": "/(ads?|advertising|adserver)/(vast|adtag|video|creatives?)(/|[?#]|$)",
+      "resourceTypes": ["xmlhttprequest", "media", "script", "sub_frame"],
+      "excludedInitiatorDomains": ["twitch.tv", "tradingview.com", "youtube.com", "kleinanzeigen.de"]
+    }
+  }
+]

@@ -138,7 +138,10 @@ function check(file: string, universal: boolean): boolean {
 
 const manual = process.argv[2] ?? path.join(ROOT, 'Haki Shield', 'rules.json');
 const generated = process.argv[3] ?? path.join(ROOT, 'Haki Shield', 'universal.json');
+const player = process.argv[4] ?? path.join(ROOT, 'Haki Shield', 'playerads.json');
 const okManual = check(manual, false);
 const okGenerated = check(generated, true);
-console.log(okManual && okGenerated ? 'ALL_OK' : 'CHECK_FAILED');
-process.exitCode = okManual && okGenerated ? 0 : 1;
+const okPlayer = check(player, true);
+const ok = okManual && okGenerated && okPlayer;
+console.log(ok ? 'ALL_OK' : 'CHECK_FAILED');
+process.exitCode = ok ? 0 : 1;

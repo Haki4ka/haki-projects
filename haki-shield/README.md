@@ -6,7 +6,7 @@ for two jobs:
 1. ordinary network blocking with declarative rules;
 2. removing ads that are stitched into a live Twitch HLS stream.
 
-Version 1.6.1. See `CHANGELOG.md` for the full history.
+Version 1.7.0. See `CHANGELOG.md` for the full history.
 
 ## What is inside
 
@@ -15,9 +15,13 @@ Version 1.6.1. See `CHANGELOG.md` for the full history.
   Only `||domain^`-style entries were kept; unknown modifiers were dropped.
   Rules carry exclusions so they never fire on Twitch, TradingView, YouTube
   or Kleinanzeigen. See `THIRD-PARTY.md`.
+- `playerads.json` — 10 rules against generic VAST/ad-tag endpoints and
+  ad creatives injected into ordinary video players.
 - `background.js` — ruleset toggles and a per-site counter.
 - `bridge.js`, `twitch.js` — page-side hooks. They rewrite the playback token
   request and patch playlist responses inside the player worker.
+- `player.js` — MAIN-world guard that keeps the first legitimate media source
+  and ignores later swaps to an ad creative after a VAST request.
 - `cosmetic.js` — small site-specific CSS cleanups.
 - `popup.html/js/css`, `options.html/js` — controls and exception list.
 
@@ -29,6 +33,19 @@ block is found, its segment URLs, `#EXTINF` and date-time lines are replaced
 with the last known live segment instead of being deleted — deleting lines
 breaks HLS timing. A null MPEG-TS packet is returned for cached ad segments.
 Bounded ad breaks are still removed outright.
+
+## In-player ads
+
+Some sites load a normal video from their own host, then fetch a VAST tag and
+swap `video.src` to an ad creative on a different host. That produced ads at the
+start and in the middle of a video. The generic layer blocks the VAST/ad-tag and
+creative endpoints, and `player.js` refuses a source swap to an unknown host
+once a VAST request has been seen. The same **Video ads** switch controls both
+this layer and the Twitch stream hooks.
+
+One endpoint that looks like an ad endpoint is deliberately *not* blocked:
+on measured sites it belongs to stream control, and blocking it stops the real
+video. This is documented in the source so it is not "fixed" again by mistake.
 
 ## Install
 

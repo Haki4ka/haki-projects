@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "Haki Shield — Ad Blocker",
   "short_name": "Haki Shield",
-  "version": "1.6.1",
-  "description": "Our own blocker: network ads, banners, Twitch stream ads and an opt-in universal filter layer. Made by Haki.",
+  "version": "1.7.0",
+  "description": "Our own blocker: network ads, banners, in-player video ads, Twitch stream ads and an opt-in universal filter layer. Made by Haki.",
   "permissions": [
     "declarativeNetRequest",
     "declarativeNetRequestFeedback",
@@ -24,12 +24,17 @@
         "id": "universal",
         "enabled": false,
         "path": "universal.json"
+      },
+      {
+        "id": "playerads",
+        "enabled": false,
+        "path": "playerads.json"
       }
     ]
   },
   "content_scripts": [
     {
-      "matches": ["*://*.twitch.tv/*"],
+      "matches": ["<all_urls>"],
       "js": ["bridge.js"],
       "run_at": "document_start",
       "all_frames": false
@@ -37,6 +42,13 @@
     {
       "matches": ["*://*.twitch.tv/*"],
       "js": ["twitch.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": false
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["player.js"],
       "run_at": "document_start",
       "world": "MAIN",
       "all_frames": false

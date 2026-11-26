@@ -1,4 +1,4 @@
-/* Haki Shield v1.6.1 — our own blocker.
+/* Haki Shield v1.7.0 — our own blocker.
    All logic here is written by us; no foreign extension code is used. */
 
 const DEFAULTS = {
@@ -10,10 +10,10 @@ const DEFAULTS = {
   disabledSites: []
 };
 
-/* Two independent static rulesets: our hand-written rules and the converted
-   public list. Never mix them into one file — the proven Twitch rules must
-   stay readable and rollback-able. */
-const ALL_RULESETS = ['ads', 'universal'];
+/* Three independent static rulesets: our hand-written rules, the converted
+   public list, and the universal in-player ad endpoints. Never mix them into
+   one file — the proven Twitch rules must stay readable and rollback-able. */
+const ALL_RULESETS = ['ads', 'universal', 'playerads'];
 let state = { ...DEFAULTS };
 let enabledRulesets = [];
 let rulesetError = '';
@@ -74,9 +74,11 @@ async function save() {
 async function applyRules() {
   const adsOn = !!state.enabled && !!state.networkAds;
   const universalOn = adsOn && !!state.universal;
+  const videoOn = adsOn && !!state.videoAds;
   const wanted = [];
   if (adsOn) wanted.push('ads');
   if (universalOn) wanted.push('universal');
+  if (videoOn) wanted.push('playerads');
 
   rulesetError = '';
   try {
