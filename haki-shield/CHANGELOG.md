@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.2
+- Block counters are now saved in local extension storage, so per-site and total counts survive a browser restart. No URLs or history are stored.
+- The options page label no longer says "this session".
+
 ## 1.9.1
 - Weekly EasyList refresh: 25 000 universal static rules rebuilt from the current upstream list.
 - No behaviour changes to the Twitch, TradingView or OLED logic; all rule checks pass.

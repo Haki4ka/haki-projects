@@ -1,4 +1,4 @@
-/* Haki Shield v1.9.1 — our own blocker.
+/* Haki Shield v1.9.2 — our own blocker.
    All logic here is written by us; no foreign extension code is used. */
 
 const DEFAULTS = {
@@ -18,11 +18,13 @@ let state = { ...DEFAULTS };
 let enabledRulesets = [];
 let rulesetError = '';
 
-/* Counters live only in the service worker. They are intentionally NOT saved:
-   a browser restart starts a fresh session with zeros. */
-const siteCounts = Object.create(null);
+/* Counters survive a service-worker or browser restart. Only domain names and
+   numbers are stored locally; no URLs, no history, no sync. */
+let siteCounts = Object.create(null);
 let blockedTotal = 0;
 let broadcastTimer = null;
+let saveChain = Promise.resolve();
+const COUNTER_KEY = 'blockCounters';
 
 function normalizeHost(value) {
   if (!value) return '';
@@ -33,12 +35,45 @@ function normalizeHost(value) {
   }
 }
 
-function addBlocked(host, count) {
+async function loadCounters() {
+  const data = await chrome.storage.local.get(COUNTER_KEY);
+  const saved = data && data[COUNTER_KEY];
+  siteCounts = Object.create(null);
+  if (!saved || typeof saved !== 'object') return;
+
+  const sites = saved.sites || {};
+  let sum = 0;
+  for (const key of Object.keys(sites)) {
+    const n = Math.floor(Number(sites[key]));
+    const host = normalizeHost(key);
+    if (!Number.isFinite(n) || n <= 0 || !host) continue;
+    siteCounts[host] = (siteCounts[host] || 0) + n;
+    sum += n;
+  }
+  const total = Math.floor(Number(saved.total));
+  blockedTotal = Number.isFinite(total) && total >= 0 ? Math.max(total, sum) : sum;
+}
+
+function saveCounters() {
+  const payload = {
+    [COUNTER_KEY]: { total: blockedTotal, sites: { ...siteCounts } }
+  };
+  saveChain = saveChain
+    .then(function () { return chrome.storage.local.set(payload); })
+    .catch(function (e) { console.warn('Haki Shield: cannot save counters', e); });
+  return saveChain;
+}
+
+const countersReady = loadCounters();
+
+async function addBlocked(host, count) {
+  await countersReady;
   const site = normalizeHost(host);
-  const n = Math.max(0, Math.min(parseInt(count, 10) || 0, 500));
+  const n = Math.max(0, Math.min(Math.floor(Number(count)) || 0, 500));
   if (!site || !n) return;
   siteCounts[site] = (siteCounts[site] || 0) + n;
   blockedTotal += n;
+  void saveCounters();
   scheduleBroadcast();
 }
 
@@ -62,6 +97,7 @@ function snapshot() {
 }
 
 async function init() {
+  await countersReady;
   const saved = await chrome.storage.local.get(Object.keys(DEFAULTS));
   state = { ...DEFAULTS, ...saved };
   if (!Array.isArray(state.disabledSites)) state.disabledSites = [];
@@ -155,17 +191,18 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
   if (!msg) return false;
 
   if (msg.type === 'get-state') {
-    sendResponse(snapshot());
+    countersReady.then(function () { sendResponse(snapshot()); });
     return true;
   }
   if (msg.type === 'get-site-count') {
-    sendResponse({ count: siteCounts[normalizeHost(msg.host)] || 0 });
+    countersReady.then(function () {
+      sendResponse({ count: siteCounts[normalizeHost(msg.host)] || 0 });
+    });
     return true;
   }
   if (msg.type === 'haki-blocked') {
     const host = msg.host || (sender.tab && sender.tab.url) || '';
-    addBlocked(host, msg.count);
-    sendResponse({ ok: true });
+    addBlocked(host, msg.count).then(function () { sendResponse({ ok: true }); });
     return true;
   }
   if (msg.type === 'set-state') {
@@ -174,7 +211,7 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
       if (Object.prototype.hasOwnProperty.call(patch, key)) state[key] = patch[key];
     }
     if (!Array.isArray(state.disabledSites)) state.disabledSites = [];
-    save().then(applyRules).then(function () {
+    Promise.all([save(), countersReady]).then(applyRules).then(function () {
       const out = snapshot();
       broadcast();
       sendResponse(out);
@@ -195,13 +232,13 @@ try {
     const req = (info && info.request) || {};
     const fromInitiator = normalizeHost(req.initiator);
     if (fromInitiator) {
-      addBlocked(fromInitiator, 1);
+      void addBlocked(fromInitiator, 1);
       return;
     }
     if (typeof req.tabId === 'number' && req.tabId >= 0) {
       try {
         chrome.tabs.get(req.tabId, function (tab) {
-          addBlocked((tab && tab.url) || '', 1);
+          void addBlocked((tab && tab.url) || '', 1);
         });
       } catch (e) {
         void e;

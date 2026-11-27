@@ -235,7 +235,120 @@ body {
 .row.busy .switch { cursor: wait; }
 .row.unavailable .switch { cursor: not-allowed; }
 
+.gray-box {
+  margin-top: 13px;
+  padding: 11px 11px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #070709;
+}
 
+.gray-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.gray-head b {
+  color: #dedee4;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.gray-head small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.gray-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.gray-empty {
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.gray-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 5px 4px 8px;
+  border: 1px solid #292934;
+  border-radius: 999px;
+  background: #111117;
+  color: #e7e7ec;
+  font-size: 10.5px;
+}
+
+.gray-chip button {
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #262631;
+  color: #bcbcc6;
+  font: 11px/14px system-ui, sans-serif;
+  text-align: center;
+  cursor: pointer;
+}
+
+.gray-chip button:hover {
+  background: #4b2c73;
+  color: #fff;
+}
+
+.gray-input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.gray-input {
+  min-width: 0;
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #292934;
+  border-radius: 8px;
+  outline: none;
+  background: #000;
+  color: var(--text);
+  font: 11px/1.2 system-ui, sans-serif;
+}
+
+.gray-input:focus {
+  border-color: var(--accent);
+}
+
+.gray-add {
+  padding: 0 10px;
+  border: 1px solid #5b3b86;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent-deep), var(--accent));
+  color: #fff;
+  font: 600 11px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.gray-add:disabled {
+  border-color: #292934;
+  background: #1c1c22;
+  color: #777781;
+  cursor: default;
+}
+
+.gray-note {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
 
 .foot {
   display: flex;

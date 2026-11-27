@@ -56,6 +56,16 @@
       </div>
     </div>
 
+    <section class="gray-box" id="grayBox">
+      <div class="gray-head"><b>Gray-mode sites</b><small>Dark surfaces, no color inversion</small></div>
+      <div class="gray-list" id="grayList"><span class="gray-empty" id="grayEmpty">No custom sites yet.</span></div>
+      <div class="gray-input-row">
+        <input class="gray-input" id="grayInput" type="text" placeholder="example.com" aria-label="Add gray-mode site" autocomplete="off" spellcheck="false">
+        <button class="gray-add" id="grayAdd" type="button" disabled>Add</button>
+      </div>
+      <p class="gray-note">Subdomains are included. Changes apply to open tabs without reloading.</p>
+    </section>
+
     <footer class="foot">
       <span class="status"><i class="dot" id="statusDot"></i><span id="statusText">Loading…</span></span>
       <kbd title="Turn both ON, press again to turn both OFF">Alt+Shift+D</kbd>

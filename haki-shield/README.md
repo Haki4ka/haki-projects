@@ -1,6 +1,6 @@
 # Haki Shield
 
-Ad blocker for Chromium and Brave. Version **1.9.1**.
+Ad blocker for Chromium and Brave. Version **1.9.2**.
 
 ## What it blocks
 
@@ -14,7 +14,7 @@ Ad blocker for Chromium and Brave. Version **1.9.1**.
 
 ## Controls
 
-The popup has independent switches for network ads, web ads, video ads and banners. It also shows blocked requests for the current site. The options page has the same switches, active rule sets and a per-site exclusion list.
+The popup has independent switches for network ads, web ads, video ads and banners. It also shows blocked requests for the current site. Counters are saved locally and survive a browser restart; no URLs or history are stored. The options page has the same switches, active rule sets and a per-site exclusion list.
 
 ## Install
 

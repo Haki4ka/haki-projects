@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Haki Shield — Ad Blocker",
   "short_name": "Haki Shield",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "Our own blocker: network ads, banners, in-player video ads, Twitch stream ads and an opt-in universal filter layer. Made by Haki.",
   "permissions": [
     "declarativeNetRequest",

@@ -1,13 +1,13 @@
-/* Haki OLED v3.3.1
-   One toolbar button opens popup.html with TWO INDEPENDENT switches:
+/* Haki OLED v3.3.2
+   One toolbar button opens popup.html with two independent switches:
      1) browser theme -> chrome.management.setEnabled(THEME_ID, ...)
      2) site darkening -> chrome.storage.local['sitesEnabled']
-   Alt+Shift+D is different: it toggles BOTH at once, always ending in a
-   consistent state (both ON or both OFF). All logic lives here; the popup
-   only sends messages. */
+   The popup also edits a gray-mode list: domains there get dark surfaces
+   without inversion. Alt+Shift+D toggles BOTH main switches at once. */
 
 const THEME_ID = 'embggbpfahheclcjifbkcejahhjnfcfc';
 const SITES_KEY = 'sitesEnabled';
+const GRAY_KEY = 'graySites';
 const SITES_MENU = 'haki-toggle-sites';
 
 /* ---------- Browser theme ---------- */
@@ -37,6 +37,47 @@ async function setTheme(on) {
 async function sitesOn() {
   const data = await chrome.storage.local.get(SITES_KEY);
   return data[SITES_KEY] !== false; // enabled by default
+}
+
+function normalizeDomain(value) {
+  let s = String(value || '').trim().toLowerCase();
+  if (!s) return '';
+  if (s.indexOf('://') === -1) s = 'https://' + s;
+  try {
+    s = new URL(s).hostname.toLowerCase();
+  } catch (e) {
+    return '';
+  }
+  return s.replace(/^www\./, '').replace(/^\.+|\.+$/g, '');
+}
+
+function cleanDomains(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const value of list) {
+    const d = normalizeDomain(value);
+    if (d && out.indexOf(d) === -1) out.push(d);
+  }
+  return out.sort();
+}
+
+async function getGraySites() {
+  const data = await chrome.storage.local.get(GRAY_KEY);
+  return cleanDomains(data[GRAY_KEY]);
+}
+
+async function setGraySites(list) {
+  const sites = cleanDomains(list);
+  await chrome.storage.local.set({ [GRAY_KEY]: sites });
+  chrome.tabs.query({}, function (tabs) {
+    for (const tab of tabs) {
+      if (!tab.id) continue;
+      chrome.tabs.sendMessage(tab.id, { type: 'haki-gray-list-changed', sites: sites }, function () {
+        void chrome.runtime.lastError;
+      });
+    }
+  });
+  return sites;
 }
 
 function tellTabs(on) {
@@ -177,6 +218,12 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
       return true;
     case 'haki-toggle-all':
       toggleAll().then(function (on) { sendResponse({ enabled: on }); });
+      return true;
+    case 'haki-gray-get':
+      getGraySites().then(function (sites) { sendResponse({ sites: sites }); });
+      return true;
+    case 'haki-gray-set':
+      setGraySites(msg.sites).then(function (sites) { sendResponse({ sites: sites }); });
       return true;
     default:
       return false;

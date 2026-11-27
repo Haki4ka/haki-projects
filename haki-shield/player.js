@@ -1,4 +1,4 @@
-/* Haki Shield v1.9.1 — universal in-player ad guard.
+/* Haki Shield v1.9.2 — universal in-player ad guard.
    Written by us. Runs in the page's MAIN world so it can stop a player from
    swapping the real video source for an ad creative. Nothing imported. */
 

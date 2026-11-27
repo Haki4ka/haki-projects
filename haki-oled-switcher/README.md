@@ -1,12 +1,13 @@
 # Haki OLED Switcher
 
-Version 3.3.1. One toolbar button controls a pure-black Brave theme and site darkening independently.
+Version 3.3.2. One toolbar button controls a pure-black Brave theme and site darkening independently.
 
 ## Features
 
 - **Theme** toggles the companion `Haki OLED Browser` theme through `chrome.management`.
 - **Sites** darkens light pages without inverting video, images or brand colours.
 - Three site modes: `haki-force-dark` for light pages, `haki-gray` for grey pages, and native dark for pages that are already dark.
+- The popup has an editable gray-mode list. Domains there use dark surfaces without colour inversion; subdomains are included, and open tabs update without a reload.
 - Separate rules for YouTube, YouTube Music, Twitch and Rezka.
 - Twitch side navigation and chat are black while chat text keeps its own colours.
 - Shadow DOM and iframes receive matching media rules.

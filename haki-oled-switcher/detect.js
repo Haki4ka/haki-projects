@@ -4,7 +4,9 @@
 
   var root = document.documentElement;
   var SITES_KEY = 'sitesEnabled';
+  var GRAY_KEY = 'graySites';
   var enabled = true;
+  var graySites = [];
   
   var appliedMode = null;
   var inFrame = window.self !== window.top;
@@ -17,6 +19,24 @@
   function nativeDarkHost() {
     var h = location.hostname;
     return /(^|\.)youtube\.com$|(^|\.)twitch\.tv$|(^|\.)dailymotion\.com$|(^|\.)vimeo\.com$/i.test(h);
+  }
+
+  function normalizeDomain(value) {
+    var s = String(value || '').trim().toLowerCase();
+    if (!s) return '';
+    if (s.indexOf('://') === -1) s = 'https://' + s;
+    try { s = new URL(s).hostname.toLowerCase(); }
+    catch (e) { return ''; }
+    return s.replace(/^www\./, '').replace(/^\.+|\.+$/g, '');
+  }
+
+  function hostInGrayList() {
+    var host = location.hostname.toLowerCase().replace(/^www\./, '');
+    for (var i = 0; i < graySites.length; i++) {
+      var d = normalizeDomain(graySites[i]);
+      if (d && (host === d || host.slice(-(d.length + 1)) === '.' + d)) return true;
+    }
+    return false;
   }
 
   function luminance(color) {
@@ -456,10 +476,10 @@
       return l !== null && l > 0.58;
     });
     
-    var isGray = vis.length > 0 && vis.every(function (c) {
+    var isGray = hostInGrayList() || (vis.length > 0 && vis.every(function (c) {
       var l = luminance(c);
       return l !== null && l >= 0.02 && l <= 0.36;
-    });
+    }));
 
     
     var fallbackLight = vis.length === 0 && !schemeDark;
@@ -562,12 +582,19 @@
   
   var query = {};
   query[SITES_KEY] = true;
+  query[GRAY_KEY] = true;
   chrome.storage.local.get(query, function (data) {
+    graySites = Array.isArray(data[GRAY_KEY]) ? data[GRAY_KEY] : [];
     setEnabled(data[SITES_KEY] !== false);
   });
 
   chrome.runtime.onMessage.addListener(function (msg) {
-    if (msg && msg.type === 'haki-sites-changed') setEnabled(!!msg.enabled);
+    if (!msg) return;
+    if (msg.type === 'haki-sites-changed') setEnabled(!!msg.enabled);
+    if (msg.type === 'haki-gray-list-changed') {
+      graySites = Array.isArray(msg.sites) ? msg.sites : [];
+      if (enabled) runDetection();
+    }
   });
 
   
