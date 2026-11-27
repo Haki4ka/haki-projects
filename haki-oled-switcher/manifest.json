@@ -3,7 +3,7 @@
   "name": "Haki OLED — Sites + Theme",
   "short_name": "Haki OLED",
   "version": "3.3.2",
-  "description": "One compact menu with two independent switches: deep black Brave theme and site darkening. Local extension by Haki.",
+  "description": "One compact menu with two independent switches: deep black browser theme and site darkening. Built for Brave.",
   "permissions": ["management", "storage", "contextMenus"],
   "host_permissions": ["<all_urls>"],
   "background": {

@@ -1,6 +1,6 @@
 # Haki Shield
 
-Ad blocker for Chromium and Brave. Version **1.9.2**.
+Ad blocker for Chromium-based browsers. Built and tested in Brave. Version **1.9.2**.
 
 ## What it blocks
 

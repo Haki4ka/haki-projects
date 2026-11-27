@@ -3,7 +3,7 @@
   "name": "Haki Shield — Ad Blocker",
   "short_name": "Haki Shield",
   "version": "1.9.2",
-  "description": "Ad blocker for Chromium and Brave: network rules, EasyList layer, video ads and Twitch streams.",
+  "description": "Ad blocker for Chromium-based browsers: network rules, EasyList layer, video ads and Twitch streams.",
   "permissions": [
     "declarativeNetRequest",
     "declarativeNetRequestFeedback",

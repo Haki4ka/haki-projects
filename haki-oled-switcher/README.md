@@ -1,6 +1,6 @@
 # Haki OLED Switcher
 
-Version 3.3.2. One toolbar button controls a pure-black Brave theme and site darkening independently.
+Version 3.3.2. One toolbar button controls a pure-black browser theme and site darkening independently. Built and tested in Brave.
 
 ## Features
 
@@ -22,4 +22,6 @@ The theme and site switches do not affect each other.
 
 ## Install
 
-From the release ZIP, unpack it and load `theme/`, then `switcher/`, as unpacked extensions in `brave://extensions` with developer mode on. In this repository the same folders are `haki-oled-theme/` and `haki-oled-switcher/`. Pin the toolbar icon if Brave unpins it after an update.
+From the release ZIP, unpack it and load `theme/`, then `switcher/`, as unpacked extensions on the browser's extensions page (`brave://extensions` in Brave) with developer mode on. In this repository the same folders are `haki-oled-theme/` and `haki-oled-switcher/`. Pin the toolbar icon if the browser unpins it after an update.
+
+Site darkening works in any Chromium-based browser. The theme switch uses the companion theme's extension ID, so it is intended for Brave; darkening still works if the theme is not found.
