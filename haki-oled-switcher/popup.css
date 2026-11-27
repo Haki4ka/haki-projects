@@ -37,7 +37,7 @@ body {
   opacity: .75;
 }
 
-/* --- шапка --- */
+
 
 .head {
   display: flex;
@@ -177,7 +177,7 @@ body {
   white-space: nowrap;
 }
 
-/* --- перемикач --- */
+
 
 .switch {
   position: relative;
@@ -235,7 +235,7 @@ body {
 .row.busy .switch { cursor: wait; }
 .row.unavailable .switch { cursor: not-allowed; }
 
-/* --- підвал --- */
+
 
 .foot {
   display: flex;

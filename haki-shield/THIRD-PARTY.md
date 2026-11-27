@@ -12,7 +12,7 @@ This file records the one external data source we convert at build time.
   We choose the Creative Commons arm so our own extension code stays ours.
 - Required attribution: "The EasyList authors (easylist.to/)".
 - Source SHA-256 at last build: `a3cddc45e939d1906df0b71425ca54e754220d536a647de2831590ac14c5966e`
-- Rules emitted: 25000
+- Rules emitted: 24998
 - Built: 2026-11-26T00:26:26.306Z
 
 ### Upstream notice (verbatim header lines)

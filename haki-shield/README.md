@@ -1,194 +1,37 @@
-# Haki Shield — наш власний блокувальник реклами
+# Haki Shield
 
-Версія **1.8.0**. Увесь код у цій папці написаний нами з нуля — це **не форк Purple і не копія чужого розширення**.Виняток — один відкритий набір даних EasyList, сконвертований нашим власним кодом; ліцензія й атрибуція — у `THIRD-PARTY.md`.
+Ad blocker for Chromium and Brave. Version **1.8.9**.
 
-### Що нового в 1.8.0 — Twitch: пре-рол і довгий старт
+## What it blocks
 
-У пре-ролі рекламні сегменти йдуть на початку плейлиста, коли ще немає жодного
-живого сегмента. Старий код не мав чим їх підмінити — ролик лишався в плейлисті
-й плеєр чекав його повної тривалості (~30 с). Тепер останній живий сегмент разом
-із його `#EXTINF` і `#EXT-X-PROGRAM-DATE-TIME` зберігається між оновленнями
-плейлиста й застосовується з першого ж рядка. Рекламні URL зіставляються за
-`origin + pathname`, а очищення `.m3u8` працює і в головному потоці (`fetch`/`XHR`),
-якщо плеєр читає плейлист не у Worker-і. Логіка спільна для всіх сайтів.
+- Network ads: 47 hand-written rules in `rules.json`.
+- Web ads: 24,998 host rules in `universal.json`, converted from EasyList by our own tool. Twitch, TradingView, YouTube and Kleinanzeigen are excluded.
+- Video ads: `playerads.json` blocks VAST requests and rejects foreign `video.src` swaps after a normal source has loaded.
+- Twitch stream ads: hooks the blob worker, removes stitched ad segments and shortens pre-roll metadata.
+- Banners: high-precision CSS for Twitch and TradingView.
 
-### Що нового в 1.7.0 — реклама всередині відеоплеєра (універсально)
+`remote_control.php` is never blocked. It is part of Twitch stream control.
 
-Банерні фільтри не чіпали ролики, які плеєр підвантажує окремо. Знято реальний механізм на прикладі одного зі сайтів, де він точно проявляється: сторінка спершу ставить у `<video>` звичайне відео зі свого хоста, потім іде запит до VAST-ендпоінта (`/do2/<hash>/vast`), і після нього `video.src` підміняється на рекламний mp4 з чужого хоста (`/video/ol_<hash>.mp4`). Звідси — реклама і на початку, і посеред ролика, і «персоналізована» мовою за IP.
+## Controls
 
-Ліки — окремий універсальний шар, **не патч під один сайт**:
+The popup has independent switches for network ads, web ads, video ads and banners. It also shows blocked requests for the current site. The options page has the same switches, active rule sets and a per-site exclusion list.
 
-- `playerads.json` — новий окремий static ruleset (10 правил) на VAST/адтаг/SDK-скрипти й рекламні mp4. Має ті самі виключення для Twitch, TradingView, YouTube і Kleinanzeigen.
-- `player.js` (MAIN world, усі сайти) — якщо VAST усе ж пройшов, тримає список «перший нормальний хост» і проігнорує підміну `video.src` `/ <source src>` на чужий хост; ловить VAST-відповіді у `fetch`/`XHR` і не дає SDK дістати рекламний URL.
-- Перемикач **Video ads** у popup керує і цим шаром теж.
+## Install
 
-**Свідомо не блокується** `remote_control.php`: на виміряному сайті це частина керування самим потоком — при її блокуванні контент перестав грати (`readyState=3`, `currentTime=0`). Це записано в коді, щоб ніхто знову не «поліпшив» і не зламав відтворення.
+1. Open `chrome://extensions` or `brave://extensions`.
+2. Enable developer mode.
+3. Choose **Load unpacked** and select this folder.
 
-Перевірено в 9222 + Playwright: з увімкненим новим ruleset VAST-запит заблоковано, підміни `src` немає, контент грає до кінця; без цього шару рекламний mp4 підставлявся двічі.
+No build step is needed to use the extension.
 
-### Що нового в 1.6.1 — щотижневе оновлення EasyList
+## Updating filters
 
-- Запущено безпечне автооновлення за дозволом користувача. Завдання Planner
-  **«Haki Shield - Weekly EasyList»**: неділя 04:00 + при вході в систему,
-  з 7-денним захистом від повторного збільшення версії.
-- `tools/update-easylist.mjs` звіряє SHA-256 із джерела; якщо EasyList змінився —
-  робить бекап, перезбирає `universal.json`, перевіряє ліміти й збільшує версію.
-  При помилці — журнал і бекап, розширення лишається працездатним.
-- Журнал: `AI Lab\logs\easylist-update.log`. Бекапи: `Haki Shield Backups\easylist\`.
-- **Важливо:** нові фільтри підхоплюються тільки після **Update → Reload**
-  у `brave://extensions`. Під час активного тесту я розширення не перезавантажую.
-- Повна історія — у `CHANGELOG.md`.
+`tools/update-easylist.mjs` checks EasyList once a week. On a change it backs up, rebuilds `universal.json`, validates the rulesets, bumps the version and writes to `AI Lab/logs/easylist-update.log`. Reload the unpacked extension after a version bump.
 
-### Що нового в 1.6.0 — універсальний шар
+## Attribution
 
-- **Другий, окремий ruleset `universal`** із 25 000 правил. Старий `rules.json` із 47 ручними правилами Twitch/Google/Ads (ID 1–48 без 38) **не змінено взагалі**.
-- Свій конвертер `tools/build-filters.mjs` бере з EasyList лише безпечні `||domain^` правила. Відкидає шляхи, регекси, косметику, скрипти, `$redirect/$csp/$removeparam/$domain=`, IP, публічні суфікси й спільні CDN (`cloudfront.net`, `amazonaws.com`, `workers.dev` тощо). Пріоритет — коротким доменам із рекламними словами, щоб doubleclick/adnxs/criteo потрапили в список першими.
-- **Кожне правило має `excludedInitiatorDomains`** для `twitch.tv`, `tradingview.com`, `youtube.com`, `kleinanzeigen.de`; цільові запити на ці домени не блокуються взагалі. Rezka не чіпаємо.
-- **Окремий перемикач `Universal ads`** у popup і налаштуваннях. Його вимкнення не зачіпає старі правила, Twitch-хуки й косметику.
-- У налаштуваннях видно **Active filter sets** і можливу помилку завантаження ruleset — не треба здогадуватися, що саме ввімкнено.
-- Косметику розширено лише кількома високоточними селекторами (AMP/iframe-реклама, `ad-slot`, `ad-placeholder`). Масовий EasyList CSS не імпортуємо — він ламає верстку.
-- Атрибуція: EasyList, **CC BY-SA 3.0**, «The EasyList authors (easylist.to/)». GPLv3-конвертер AdGuard не використано й не скопійовано.
-- Еталонний бекап 1.5.1: `Haki Shield Backups\v1.5.1-before-universal-2026-11-25` із `BASELINE.md`. Відкат — копіюванням цієї папки назад і звичайним Update → Reload.
+EasyList data is used under CC BY-SA 3.0. See `THIRD-PARTY.md`.
 
-### Що нового в 1.5.1 — довге завантаження стріму
+## License
 
-- **Необмежений рекламний блок більше не вирізається з плейлиста.** Раніше, якщо у блоку не було явного кінця, ми видаляли його рядки — плеєр перезапитував плейлист і чекав, поки мине 30-секундний `#EXTINF`. Тепер рядки лишаються, а URL рекламного сегмента, його `#EXTINF` і `#EXT-X-PROGRAM-DATE-TIME` підміняються **останнім живим сегментом** із нормальною тривалістю. Плеєр стартує одразу; кешований рекламний URL усе одно перекритий fetch-хуком.
-- Обмежені блоки з явним кінцем і далі прибираються, як раніше. Додано захист `adSeen >= 12`, щоб необмежений блок не проковтнув увесь потік, і перевірку same-host: сегменти з того самого хоста, що й живі, рекламою не вважаються.
-- Перевірено в 9222 + Playwright: синтетичні плейлисти (обмежений і необмежений блок) дають 0 залишкових довгих `EXTINF`, живі сегменти збережені, хибних спрацювань на реальних `usher`/`playlist.ttvnw.net` — 0. Свіжа вкладка зі стрімом: старт **2580 мс**, `version:1.5.1`, `workers:2`, `readyState:4`.
-- В основному Brave оновлено через **Update → Reload**; користувач підтвердив: стріми стартують швидко, затримок і банерів немає.
-
-### Що нового в 1.5.0
-
-- **Лічильник «Blocked on this site» у popup.** Лічиться окремо для кожного домену: DNR-події прив'язуються до `initiator` запиту, а хuki Twitch — через `bridge.js` до `background.js`. Лічильник **живе тільки в пам'яті фонового процесу**: історії немає, після перезапуску браузера все починається з нуля. У popup показується кількість для активної вкладки, а не загальна сума.
-- **Прибрано `mobile_web` із запасних типів токена** (`BACKUP_TYPES = ['embed', 'autoplay', 'site']`). Мобільний токен іноді обмежував стрім до 360p — тепер його ніколи не пробуємо. Перший вибір лишається `popout`.
-- Додано команду `get-site-count` для точного запиту лічильника по домену; у `snapshot()` тепер є `siteCounts`.
-- **Пастка оновлення в 9222:** якщо файли на диску вже 1.5.0, а вкладки підхопили новий контент-скрипт, старий service worker усе ще може відповідати по-старому (без `siteCounts` і `haki-blocked`). Ліки — CDP `Extensions.loadUnpacked` для цієї папки, потім свіжа вкладка/пopup. У основному Brave достатньо звичного **Update → Reload**.
-
-### Що змінилось у 1.1–1.3 (чому pre-roll не зникав у 1.0)
-
-1. **1.0 перехоплював тільки звичайні Worker-и.** Twitch створює `blob:`-Worker, а наш хук ставився після його `importScripts()` — плейлист читався повз нас (`playlists: 0`). Тепер текст Worker-а читається синхронним XHR ще до `importScripts()`, і наші хуки ставляться **до** запуску оригінального коду.
-2. **Popout-токен сам по собі більше не рятує.** У живих записах навіть після `playerType:"popout"` відповідь мала `show_ads:true, server_ads:true`. У 1.3 додано запасні типи (`mobile_web → embed → autoplay → site`): якщо токен із рекламою, тихо перепитуємо інший і підміняємо відповідь GQL на токен без `show_ads`/`server_ads`. **У 1.5 `mobile_web` прибрано** — він міг знижувати якість до 360p, тепер запасні типи `embed → autoplay → site`.
-3. **Маркери реклами в 1.0 були не ті.** `twitch-stream-source` і `twitch-ad-quartile` — це **не** реклама, а `twitch-trigger` само по собі теж буває на звичайному потоці. Тепер початок блоку визначає `CLASS="twitch-stitched-ad"` / `twitch-maf-ad` / `SCTE35-OUT`, а кінець — повернення `X-TV-TWITCH-STREAM-SOURCE="live"`.
-4. **Сегменти не вирізаються з плейлиста**, бо це ламає таймінг HLS. Їхні URL лишаються на місці, але кешуються, і Worker/сторінка віддають замість них порожній MPEG-TS (null-пакети). Глядач бачить чорне замість реклами, а потік не завмирає.
-5. З usher-URL прибираємо `acmb` і `parent_domains`.
-
-### Подвійний рев'ю коду — виправлення у 1.4.0
-
-- Виправлено **невалідний null-пакет MPEG-TS**: тепер коректний заголовок `0x47 1F FF 10` (PID `0x1FFF`), а не `0x47 FF 1F FF`. Демуксер не відкидатиме пакети.
-- Головний вимикач і **`videoAds` тепер справді зупиняють Twitch-хуки**; додано обробник `message` всередині Worker, щоб уже запущений Worker реагував на зміни без перезавантаження сторінки.
-- **Кешування тільки точного URL** рекламного сегмента (не «голого» шляху), TTL 30 с і автоматичне очищення — легітимні сегменти з іншим підписом більше не стають чорними.
-- Підмінені `Response` позбавляються зайвих заголовків (`content-encoding`, `etag`, `last-modified`, `transfer-encoding`) і отримують явний `content-type`.
-- `stats.segmentsRemoved` тепер рахує **дельту з Worker**, а не завжди 0.
-- `cleanUrl()` застосовується лише до m3u8/usher, а не до всіх запитів.
-- Виправлено regex у правилі 40 (не ловить `notwitch.tv`), прибрано дубль правила 38.
-- **«Disable on this site» тепер діє і на мережеві запити** — додано session-правила `allow` з `initiatorDomains`.
-- Виправлено кнопку сайту для піддоменів, лічильник після перемикачів і зникнення введеного тексту в налаштуваннях.
-- Прибрано витік `URL.createObjectURL` і зайве екранування повідомлень (`e.source === window`).
-- Оновлено версії в файлах: усі показувачі тепер кажуть 1.4.0.
-
-## Що вміє
-
-- **Мережева реклама й трекери** — власний набір правил `declarativeNetRequest` (`rules.json`, 47 правил): Google Ads, DoubleClick, Amazon Ads, Criteo, Taboola, Outbrain, PopAds, ExoClick, рекламні домени Twitch тощо.
-- **Універсальний шар** (`universal.json`, 24 998 правил) — безпечно сконвертовані доменні правила EasyList для звичайних сайтів. Окремий вимикач, окремі виключення для вже налаштованих сайтів.
-- **Реклама у відеоплеєрах** — окремий ruleset `playerads.json` + MAIN-world хуки `player.js`: перекриваємо VAST/адтаг і не даємо плеєру підмінити `video.src` рекламним роликом. Керується перемикачем **Video ads**.
-- **Банери на сторінках** — власний CSS (`cosmetic.js`).
-- **Twitch — реклама у стрімі** — власний модуль (`twitch.js`):
-  1. ставить `playerType: "popout"`, а якщо відповідь усе одно з рекламою — перепитує запасні типи `embed → autoplay → site` і підміняє токен без `show_ads`/`server_ads`;
-  2. ловить HLS у `blob:`-Worker ще до `importScripts()`;
-  3. знаходить рекламні сегменти за `twitch-stitched-ad` / `twitch-maf-ad` / `CUE-OUT`, кешує їхні URL і віддає порожній TS замість реклами;
-  4. блокує запити на `ads.twitch.tv`;
-  5. прибирає `acmb`/`parent_domains` з usher-URL.
-- **Twitch — власний промо-банер Gift Subs.** Це **не стороння реклама**, а маркетинг самого Twitch ("Gift subs for them, 35% off for you", "Get 35% off 5+ gift subs…"). Ховаємо його CSS-правилом `html body div[class*="giftExpirationCallout"]`. Кнопку **Subscribe** не чіпаємо.
-- **TradingView** — реклама там іде через Google Ad Manager (вже покрито правилами 1–3). Додатково ховаємо:
-  - виїжджаючий тост `#charting-ad` (у тому числі батьківський `<li>`);
-  - спливаючий промо-діалог Black Friday і зняття блокування скролу (`body.i-no-scroll`);
-  - кнопку Black Friday у шапці й промо-банер на головній.
-  - Не ховаємо картки `/brokers/`, чарти, дані ринку, cookie-діалог і subscriptions widget.
-- **Керування по сайтах** — можна вимкнути захист на конкретному домені (тепер і для мережевих запитів).
-- **Окремий popup і сторінка налаштувань** — чорний OLED-стиль, фіолетові акценти, англійський інтерфейс.
-- **Лічильник заблокованих запитів** у popup (`Blocked on this site`) — окремо для активного домену, без історії, скидається при перезапуску браузера.
-
-## Як користуватися
-
-1. `brave://extensions` → увімкнути **Developer mode** → **Load unpacked** → вибрати цю папку `Haki Shield`.
-2. Клік по новій кнопці — popup із п'ятьма перемикачами.
-3. На сторінці, де щось зламалося, натисни **Disable on this site**. Повернення — **Enable on this site**.
-4. Повний список виключень: **Open settings**.
-
-## Важливе
-
-- Не тримай одночасно кілька блокуерів Twitch. AdGuard можна лишити, але `twitch.tv` має бути в його Allowlist (у нас уже так).
-- Twitch періодично змінює GQL-операції — тоді реклама може повернутися на 1–2 дні. Це не поломка системи, а привід випустити оновлення.
-- Розширення працює локально, без серверів і без оплати.
-- Після зміни `manifest.json` у Brave: **Update**, потім деталі картки → **Reload**. Після зміни JS достатньо Reload.
-- Для оновлення в основному Brave є помічник `reload-shield-main.ps1`: запустити `powershell -NoProfile -ExecutionPolicy Bypass -File reload-shield-main.ps1` — він сам відкриє вкладку Extensions, знайде картку Haki Shield і натисне її **Reload**.
-- **Тихий оновлювач уже працює сам.** Завдання Planner `Haki Shield - Quiet Updater` перевіряє версію при вході й щодня о 04:05; якщо версія на диску змінилася, воно саме робить **Update → Reload** в основному Brave і `Extensions.loadUnpacked` у 9222. Поки версія не змінилася — нічого не чіпає. Перевірка вручну: `powershell -NoProfile -ExecutionPolicy Bypass -File tools\auto-update-extensions.ps1 -CheckOnly`. Перевстановлення завдання: `tools\install-quiet-updater.ps1`.
-- Якщо після санітизації капсули в `universal.json` з'являться не-ASCII символи у `urlFilter`, Brave відхилить ruleset і зніме розширення. Такі два правила прибрано; `npm run verify` знову дає `ALL_OK`.
-
-## Файли
-
-| Файл | Призначення |
-|---|---|
-| `manifest.json` | MV3-маніфест, дозволи, точки входу |
-| `rules.json` | наші DNR-правила блокування мережі (47, недоторкані) |
-| `universal.json` | згенеровані безпечні доменні правила EasyList (24 998) |
-| `playerads.json` | окремі правила проти реклами у відеоплеєрах (VAST/адтаг/SDK) |
-| `THIRD-PARTY.md` | ліцензія, атрибуція й межі конвертування |
-| `tools/build-filters.mjs` | наш конвертер офіційного фільтра у формат DNR |
-| `background.js` | стан, збереження, три rulesets, виключення сайтів, лічильник |
-| `player.js` | MAIN-world захист від підміни `video.src` рекламою |
-| `bridge.js` | передача стану зі сховища на сторінку |
-| `twitch.js` | наш Twitch-модуль (токен + HLS + Worker) |
-| `cosmetic.js` | приховування банерів (Twitch + TradingView) |
-| `popup.html/css/js` | меню кнопки |
-| `options.html/js` | налаштування й список сайтів |
-| `make-icons.ps1` | генерація іконок (System.Drawing, без залежностей) |
-| `reload-shield-main.ps1` | перезавантаження розширення в основному Brave |
-| `tools/auto-update-extensions.ps1` | тихий оновлювач: звіряє версію й оновлює обидва браузери |
-| `tools/install-quiet-updater.ps1` | реєструє завдання Planner для тихого оновлювача |
-| `install-main-brave.ps1` | первісне встановлення unpacked |
-| `toggle-purple.ps1` | повернення Purple Ads Blocker, якщо потрібне порівняння |
-
-## Встановлення й поточний етап
-
-Розширення встановлено в **обох браузерах**, версія **1.7.0**:
-- основний Brave — ID `hlabfjphnejfjhlilhpfkoanlejpomin`, кнопка на панелі (`Haki Shield — ON`);
-- debug-Brave 9222 — той самий ID у профілі `Debug9222`.
-
-Щоб не було двох Twitch-блокуерів одночасно, **Purple Ads Blocker тимчасово вимкнено** в основному Brave. Повернути його назад: запусти `toggle-purple.ps1` при відкритій сторінці `chrome://extensions`.
-
-Канали перевірки: 9222 + Playwright (DOM, токен, HLS, DNR) і основний Brave через Browse/UIAutomation (реальна установка, кнопка, жива сторінка). Помилок у коді розширення немає; поодинокі помилки GraphQL/CORS у консолі належать самому Twitch.
-
-Перевірено після 1.5.0 (9222 + Playwright):
-- свіжа вкладка `twitch.tv/jynxzi`: `version:1.5.1`, `workers:2`, `tokens:1`, старт 2580 мс, відео грає (`readyState:4`, `paused:false`), помилок від нашого розширення в консолі немає;
-- лічильник: `haki-blocked` із `count:3` для `twitch.tv` дав `blockedToday:3`, `siteCounts:{"twitch.tv":3}`, `get-site-count` → `3`; popup із підставленим active tab показав host `twitch.tv` і `Blocked on this site = 3`;
-- DNR: ruleset `ads` увімкнено; запит до `googleads.g.doubleclick.net` заблоковано правилом 1 (`Failed to fetch`), `getMatchedRules()` зріс на 1, а фоновий лічильник сам зріс до 5 — прив'язка до `initiator` працює;
-- попередня пастка підтверджена: після оновлення файлів контент-скрипт у 9222 був 1.5.0, але service worker ще старий (`get-state` без `siteCounts`, нові команди не працювали). Після `Extensions.loadUnpacked` усе запрацювало.
-
-Перевірено після 1.6.0 (обидва канали):
-
-- **9222 + Playwright:** версія 1.6.0, `getEnabledRulesets()` → `["ads","universal"]`, `getAvailableStaticRuleCount()` → 304 953 (рівно −25 000), помилки ruleset немає. У налаштуваннях рядок `Active filter sets: ads + universal`.
-- **Twitch:** свіжа вкладка — старт **1984 мс**, `version:1.6.0`, `workers:2`, `readyState:4`, `1920×1080`, `paused:false`, банерів 0. Консоль: тільки власні попередження Twitch (GraphQL, `MaxListenersExceededWarning`) і `ERR_BLOCKED_BY_CLIENT` — помилок від нашого коду немає.
-- **Дія універсальних правил (`testMatchOutcome`):** запит на `ad.gt` із звичайного сайту → правило **10000**; із `twitch.tv`, `tradingview.com`, `youtube.com` → **0 збігів**; `ad.doubleclick.net` → правило 11447; `example.com` → 0. Перемикач `Universal ads`: OFF лишає тільки `ads`, ON повертає обидва rulesets.
-- **Інші захищені сайти без регресій:** TradingView — тестові `#charting-ad` і `.js-main-page-promo` мають `display:none`; YouTube Music — клас `haki-youtube`, плеєр `rgb(10,10,10)`; Kleinanzeigen — `haki-force-dark` і `invert(1) hue-rotate(180deg)`.
-- **Лічильник:** синтетичний `haki-blocked` з `count:3` для `twitch.tv` дав 0 → 3; жива вкладка Twitch додала ще один DNR-блок.
-- **Основний Brave:** картка показує **1.6.0**, підказка кнопки `Haki Shield — ON (ads ON, web ON, video ON)`; жива вкладка Twitch — `version:1.6.0`, `readyState:4`, `1920×1080`, `paused:false`, банер `display:none`. Оновлення зроблено помічником `reload-shield-main.ps1` (**Update → Reload**); у помічнику виправлено пошук вкладки Extensions і вибір кнопки Reload.
-- Еталон 1.5.1 і бекап лишаються в `Haki Shield Backups\v1.5.1-before-universal-2026-11-25`.
-
-Перевірено після 1.7.0 (26.11.2026):
-- **Користувач підтвердив:** на тому сайті, де була реклама ставок/казино у плеєрі, реклами більше немає; інших випадків не бачив.
-- `npm run verify` → `ALL_OK`: `rules.json` 47, `universal.json` 24 998, `playerads.json` 10, 0 помилок.
-- Тихий оновлювач спрацював: основний Brave показує картку **1.7.0** і підказку `Haki Shield — ON (ads ON, web ON, video ON)`; 9222 через Playwright — те саме. У 9222 `getEnabledRulesets()` → `["ads","universal","playerads"]`, `rulesetError` порожній.
-- Завдання Planner `Haki Shield - Quiet Updater` у стані `Ready`, тестовий запуск дав `LastTaskResult=0`; повторний запуск нічого не змінює (`need=False`).
-- Під час санітизації капсули два правила EasyList з не-ASCII символами зламали ruleset у 9222 — розширення зникло зі списку. Правила прибрано, Шилд повернено через CDP `Extensions.loadUnpacked`; це не було заплановане видалення.
-
-Перевірено раніше (1.4.0):
-- у 9222 — синтетичний плейлист із `twitch-stitched-ad` дає `playlists:1`, `segmentsRemoved:1`, порожній TS із коректним заголовком `71,31,255,16`; живі плейлисти не змінюються;
-- у реальному Brave на `twitch.tv/jynxzi` банер Gift Subs має `display:none`, кнопка Subscribe лишається;
-- на `tradingview.com` тестові `#charting-ad` і `.js-main-page-promo` мають `display:none`.
-
-Живий pre-roll у момент перевірки не трапився (усі токени були `show_ads:false`), тому остаточне слово — за користувачем на його стрімі. Користувач уже оновив розширення вручну в основному Brave до 1.5.1, бачить у popup «Blocked on this site» і підтвердив, що затримок і банерів більше немає.
-
-## Капсула відновлення
-
-Повний зріз чату, правил, нотаток і вихідників лежить у локальній папці `Тюбік Капсула 2026-11-25` поруч із проєктом. Якщо чат зламається — відкрий новий і покажи цю папку; інструкція — у `00-START-HERE.md`. Оновлювати капсулу після суттєвих змін локальним скриптом `tools\update-capsule.ps1`.
+MIT. See `LICENSE` in the repository root.

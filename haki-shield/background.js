@@ -1,4 +1,4 @@
-/* Haki Shield v1.8.0 — our own blocker.
+/* Haki Shield v1.8.9 — our own blocker.
    All logic here is written by us; no foreign extension code is used. */
 
 const DEFAULTS = {
@@ -52,6 +52,7 @@ function scheduleBroadcast() {
 
 function snapshot() {
   return {
+    version: chrome.runtime.getManifest().version,
     state: state,
     blockedToday: blockedTotal,
     siteCounts: { ...siteCounts },

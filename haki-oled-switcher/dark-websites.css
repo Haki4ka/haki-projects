@@ -1,22 +1,12 @@
-/* Haki OLED — примусове затемнення сайтів.
-   Біле тло -> чистий чорний (#000000), текст -> світлий.
-   Картинки й відео інвертуємо вдруге, щоб лишались природними.
-   Стиль застосовується тільки якщо detect.js виявив світлу сторінку. */
+
 
 html.haki-force-dark {
-  /* Біле ДО інверсії = чистий чорний після.
-     contrast(1.6) стискає сірі поверхні (#dedede, #ccc, #bdbdbd) до білого,
-     тому після інверсії вони теж стають чорними, а не сірими. */
+  
   background-color: #FFFFFF !important;
   filter: invert(1) hue-rotate(180deg) contrast(1.6) !important;
 }
 
-/* Точна обернена функція до фільтра сторінки:
-   contrast(0.625) = 1 / 1.6. Разом із батьківським фільтром дає
-   тотожність — кольори відео/картинок лишаються природними.
-   iframe НЕ інвертуємо тут: батьківський фільтр уже інвертує його
-   повністю, а друга інверсія на самому iframe повертала білі панелі.
-   Усередині iframe працює all_frames + клас haki-frame-media. */
+
 html.haki-force-dark img,
 html.haki-force-dark video,
 html.haki-force-dark canvas,
@@ -29,10 +19,7 @@ html.haki-force-dark [style*="background-image"] {
   filter: invert(1) hue-rotate(180deg) contrast(0.625) !important;
 }
 
-/* v3.3 — сірі сайти (jut.su, Yandex, Google, yummyani.me та ін.).
-   Їх НЕ інвертуємо: інверсія зіпсувала б кольори й зробила темно-сірі
-   поверхні білими. Натомість detect.js перефарбовує сірі блоки в #000
-   і робить текст щільним білим. Тут лише база для політності. */
+
 html.haki-gray {
   background-color: #000000 !important;
   color: #eaeaea !important;
@@ -48,10 +35,9 @@ html.haki-gray select {
   background-color: #000000 !important;
   color: #eaeaea !important;
 }
-/* Медіа на сірих сайтах лишаємо рідними — ніякої інверсії. */
 
-/* Вміст iframe: батько вже інвертує всю поверхню, тому тут інвертуємо
-   тільки медіа, щоб відео всередині не мало перевернутих кольорів. */
+
+
 html.haki-frame-media img,
 html.haki-frame-media video,
 html.haki-frame-media canvas,
@@ -64,17 +50,12 @@ html.haki-frame-media [style*="background-image"] {
   filter: invert(1) hue-rotate(180deg) contrast(0.625) !important;
 }
 
-/* Вбудований темний сайт (YouTube/Twitch тощо): скасовуємо батьківську
-   інверсію, щоб його рідна темна тема лишилась темною. */
+
 html.haki-frame-native {
   filter: invert(1) hue-rotate(180deg) contrast(0.625) !important;
 }
 
-/* Стиль, який detect.js вставляє в shadow DOM (туди звичайний CSS не діє). */
-/* haki-shadow-media: див. SHADOW_CSS у detect.js */
 
-/* НЕ додаємо color-scheme: dark для полів вводу!
-   Була помилка (2026-11-23): браузер робив поле сірим (#3B3B3B) ще ДО
-   інверсії, а після неї воно ставало світло-сірим/білим — саме тому пошук
-   на Kleinanzeigen виглядав синьо-білим. Без цього правила біле поле
-   інвертується в чорне, а темний текст — у світлий. */
+
+
+

@@ -1,12 +1,4 @@
-/* Haki OLED — окремий режим для Rezka (rezka-ua.pub та дзеркала).
-   Проблема: сайт має власну «нічну» тему з темно-синім фоном rgb(9,22,28).
-   Наша звичайна інверція перетворювала його на яскраво-білий.
-   Рішення:
-   - у ДЕННІЙ темі інвертуємо <body> з додатковим contrast(1.2):
-     сірий #efefef стає чистим #000, а не #101010, як раніше;
-   - у НІЧНІЙ темі інверцію вимикаємо зовсім і перекриваємо темно-сині
-     фони сайту на чорні. Акцентні кольори (бірюзовий, червоний) лишаємо.
-   Перемикання відбувається саме через CSS-клас body, без JS-спостерігачів. */
+
 
 html.haki-rezka body:not(.b-theme__template__night) {
   filter: invert(1) hue-rotate(180deg) contrast(1.2) !important;
@@ -26,12 +18,7 @@ html.haki-rezka body:not(.b-theme__template__night) [style*="background-image"] 
   filter: invert(1) hue-rotate(180deg) contrast(1.2) !important;
 }
 
-/* ДЕННА тема — плеєр (PlayerJS).
-   Контейнер #oframecdnplayer і панель керування мають темні фони.
-   Загальна інверція <body> перетворювала їх на білі. Тут ми повністю
-   скасовуємо дію фільтра <body> всередині #player, а медіа (відео,
-   картинки, іконки) лишаємо без додаткової інверції — вони отримують
-   рівно два перетворення (body + player), тобто виглядають природно. */
+
 html.haki-rezka body:not(.b-theme__template__night) #player {
   filter: invert(1) hue-rotate(180deg) contrast(0.8333) !important;
 }
@@ -47,7 +34,7 @@ html.haki-rezka body:not(.b-theme__template__night) #player [style*="background-
   filter: none !important;
 }
 
-/* Нічна тема сайту: темно-сині фони -> чорні. */
+
 html.haki-rezka body.b-theme__template__night { background-color: #000000 !important; }
 html.haki-rezka body.b-theme__template__night .tumbler__wrapper { background-color: #0a0a0a !important; }
 html.haki-rezka body.b-theme__template__night .medium-editor-element { background-color: #000000 !important; }
@@ -118,13 +105,10 @@ html.haki-rezka body.b-theme__template__night .b-post__direct_download-dropdown-
 html.haki-rezka body.b-theme__template__night .b-hd_prem #top-head { background-color: #000000 !important; }
 html.haki-rezka body.b-theme__template__night .b-hd_prem .b-tophead.b-wrapper { background-color: #000000 !important; }
 
-/* Текст у нічній темі м'якший за чисто білий — приємніше для OLED. */
+
 html.haki-rezka body.b-theme__template__night { color: #c8c8c8 !important; }
 
-/* ДЕННА тема: деякі блоки сайту самі пофарбовані в темний колір
-   (шапка #313131, футер і активні фільтри #000). Після інверсії вони
-   ставали світлими. Тут ми готуємо їх до інверсії: біле тло -> чорне,
-   темний текст -> світлий. Перемикач теми лишається видимим. */
+
 html.haki-rezka body:not(.b-theme__template__night) .b-tophead_wrapper {
   background-color: #ffffff !important;
   color: #373737 !important;
@@ -147,9 +131,7 @@ html.haki-rezka body:not(.b-theme__template__night) .b-favorites_content__cats_l
   color: #373737 !important;
 }
 
-/* ДЕННА тема: плашка вибору озвучки/перекладу над плеєром.
-   Темні значення «до інверсії» дають чистий чорний після фільтра <body>.
-   Колір тексту не змінюємо — він і так читається. Нічну тему не чіпаємо. */
+
 html.haki-rezka body:not(.b-theme__template__night) .b-translators__block {
   background-color: #151515 !important;
 }

@@ -1,18 +1,11 @@
-/* Haki OLED — розумне визначення: інвертуємо світлі сторінки,
-   але не чіпаємо ті, що вже темні.
 
-   Важливо (виправлено 2026-11-23): багато сайтів накладають CSS із затримкою.
-   У момент DOMContentLoaded фон <body> ще прозорий, тому старий детектор
-   вирішував «не біле» і нічого не робив (наприклад, Kleinanzeigen).
-   Тепер ми повторюємо перевірку до повного завантаження сторінки. */
 (function () {
   'use strict';
 
   var root = document.documentElement;
   var SITES_KEY = 'sitesEnabled';
   var enabled = true;
-  /* Рішення липке: після перефарбування сірого сайту в #000 повторна
-     перевірка бачить уже чорний фон і без цього зняла б клас. */
+  
   var appliedMode = null;
   var inFrame = window.self !== window.top;
   var parentDark = null;
@@ -20,9 +13,7 @@
   var SHADOW_CSS = 'video,img,canvas,picture,source,embed,object,[style*="background-image"]' +
     '{filter:invert(1) hue-rotate(180deg) contrast(0.625) !important}';
 
-  /* iframe не інвертуємо вдруге — батько вже це робить. Проте медіа всередині
-     треба інвертувати, бо батьківський фільтр перевертає і їх.
-     Темні сайти всередині iframe, навпаки, скасовують батьківську інверсію. */
+  
   function nativeDarkHost() {
     var h = location.hostname;
     return /(^|\.)youtube\.com$|(^|\.)twitch\.tv$|(^|\.)dailymotion\.com$|(^|\.)vimeo\.com$/i.test(h);
@@ -32,8 +23,7 @@
     if (!color || color.indexOf('rgb') !== 0) return null;
     var m = color.match(/[\d.]+/g);
     if (!m || m.length < 3) return null;
-    /* Прозорий фон не є «темним» — інакше сайти з прозорим <body>
-       (Pexels, Pixabay) ніколи не затемнювались. */
+    
     if (m.length > 3 && Number(m[3]) < 0.15) return null;
     return (0.2126 * Number(m[0]) + 0.7152 * Number(m[1]) + 0.0722 * Number(m[2])) / 255;
   }
@@ -45,8 +35,7 @@
     if (parentDark) root.classList.add(nativeDarkHost() ? 'haki-frame-native' : 'haki-frame-media');
   }
 
-  /* Стиль для shadow DOM: звичайний CSS батьківського документа не діє
-     всередині shadow root, тому відео там лишалось інвертованим. */
+  
   function injectShadowStyles() {
     if (!enabled || !root.classList.contains('haki-force-dark')) return;
     var hosts = document.querySelectorAll('*');
@@ -60,11 +49,7 @@
     }
   }
 
-  /* Темні плашки з білим текстом (кнопки, підписи поверх відео, бейджі)
-     після загальної інверсії ставали БІЛИМИ. Перефарбовуємо їх до білого
-     до інверсії — тоді після неї вони чорні зі світлим текстом.
-     Кольорові акценти, картинки й медіа не чіпаємо. Один прохід, без
-     спостерігача: getComputedStyle тут викликається один раз на елемент. */
+  
   var fixedColors = [];
   function normalizeColors() {
     if (!enabled || !root.classList.contains('haki-force-dark')) return;
@@ -103,12 +88,7 @@
     fixedColors = [];
   }
 
-  /* === УНІВЕРСАЛЬНИЙ ШАР (v3.3) ===========================================
-     Багато сайтів не білі й не чорні, а СІРІ: #1f1f1f (jut.su), #161617
-     (Yandex), #222428 (Google), #222 (yummyani.me). Інверсія їх псує,
-     а старий детектор взагалі нічого не робив. Треба третій стан:
-     не інвертувати, а перефарбувати сірі поверхні в чистий #000 і
-     зробити текст щільним білим. Один прохід, без спостерігача атрибутів. */
+  
   var surfaceFixes = [];
   function rgb(color) {
     if (!color || color.indexOf('rgb') !== 0) return null;
@@ -133,8 +113,7 @@
       var el = els[i];
       if (el.hasAttribute('data-haki-surface')) continue;
       var isMedia = SKIP_TAGS.test(el.tagName);
-      /* IMG не чіпаємо вміст, але його сірий фон — це та сама сіра
-         плашка, що й у звичайного блоку (наприклад, постер yummyani.me). */
+      
       if (isMedia && el.tagName !== 'IMG') continue;
       var s = getComputedStyle(el);
       var bgRaw = rgb(s.backgroundColor);
@@ -145,9 +124,7 @@
       if (r.width < 18 || r.height < 9) continue;
       var changes = [];
       var c;
-      /* Колір/вагу/прозорість міняємо ТІЛЬКИ на елементах із власним
-         текстом. Інакше opacity:1 знімає анімації й напівпрозорі серпанки
-         усього контейнера — це ламає вигляд Google/Yandex. */
+      
       var hasText = false;
       if (!isMedia) {
         var nodes = el.childNodes;
@@ -159,20 +136,16 @@
         }
       }
 
-      /* Сірі поверхні. На неінвертованих сайтах — просто в чорний.
-         На інвертованих — у білий ДО інверсії (після неї стане чорним). */
+      
       if (bg && bgRaw.a > 0.15 && bg.spread <= 16 && bg.mx >= 10 && bg.mx <= 110) {
-        /* Картинку/градієнт не чіпаємо — міняємо тільки колір тла під нею.
-           backdrop-filter лишаємо: він може бути частиною скляної панелі. */
+        
         if (!(s.backdropFilter && s.backdropFilter !== 'none')) {
           c = { prop: 'background-color', val: invert ? '#ffffff' : '#000000' };
           changes.push(c);
         }
       }
 
-      /* Сірий текст: тонкий, напівпрозорий або темно-сірий.
-         Інвертовані сайти: чорний ДО інверсії = білий після.
-         Сірі сайти: одразу щільний білий #eaeaea. */
+      
       if (hasText && fg && fg.spread <= 32) {
         var needColor = false;
         if (invert) {
@@ -212,8 +185,7 @@
     surfaceFixes = [];
   }
 
-  /* Зняття затемнення: наші CSS працюють ТІЛЬКИ під цими класами,
-     тому достатньо прибрати класи й вставлені <style>. Сторінку не перезавантажуємо. */
+  
   function strip() {
     restoreColors();
     restoreSurfaceFix();
@@ -232,12 +204,7 @@
     }
   }
 
-  /* YouTube — особливий випадок (додано 25.11.2026).
-     Сайт сам темний (#0f0f0f), тому загальна інверсія не потрібна.
-     Ми перевизначаємо його власні кольорові змінні на чистий чорний.
-     CSS вбудовано сюди, а не в manifest.json: Brave позначає unpacked-
-     розширення як «потребує перезавантаження», коли міняти manifest,
-     а зміни detect.js підхоплює автоматично. */
+  
   function injectYouTubeCss() {
     if (document.getElementById('haki-youtube-oled')) return;
     var css = [
@@ -301,7 +268,7 @@
       'html ytd-guide-entry-renderer:hover, html ytd-compact-link-renderer:hover {',
       '  background-color: #101010 !important;',
       '}',
-      /* YouTube Music: плеєр має дуже специфічні правила сайту, тому підсилюємо селектори */
+      
       '#player-bar-background#player-bar-background#player-bar-background,',
       'html body ytmusic-player-bar, html body ytmusic-app-layout,',
       'html body ytmusic-app-layout ytmusic-av-toggle,',
@@ -320,9 +287,7 @@
     style.textContent = css;
     (document.head || root || document).appendChild(style);
 
-    /* YouTube підвантажує свої таблиці стилів ПІСЛЯ нашого document_start,
-       тому з однаковою специфічністю перемагає його правило. Після load
-       перевішуємо наш style у кінець <head> — тоді каскад на нашому боці. */
+    
     function bump() {
       if (!enabled || !root.classList.contains('haki-youtube')) return;
       if (!style.parentNode) return;
@@ -336,11 +301,7 @@
     }
   }
 
-  /* Twitch — окремий випадок (додано 25.11.2026).
-     Сайт темний сам, але його сірі поверхні (#0e0e10 / #18181b / #26262c)
-     на OLED виглядають сірим. Перевизначаємо його власні кольорові змінні.
-     Фірмові фіолетові кнопки, червоні індикатори й картинки не чіпаємо —
-     інакше сайт втратить вигляд. */
+  
   function injectTwitchCss() {
     if (!enabled) return;
     if (document.getElementById('haki-twitch-oled')) return;
@@ -380,18 +341,14 @@
       '  --color-opac-gd-3: rgba(255,255,255,.08) !important;',
       '}',
       'html, html body, html #root { background-color: #000 !important; }',
-      /* Жорстко задані сірі поверхні, які не слухаються змінних */
+      
       'html .carousel-player-nav-arrow__container, html .carousel-metadata,',
       'html [class*="ScLayoutCssVars"] { background-color: #000 !important; }',
-      /* Ліва панель (стріми/підписки) і правий чат були сірими: #0e0e10 і #18181b.
-         Перекриваємо й сам контейнер, і всі проміжні обгортки. */
+      
       'html.haki-twitch [class*="side-nav"],',
       'html.haki-twitch [class*="channel-root__left-column"],',
       'html.haki-twitch [class*="channel-root__right-column"],',
-      /* НЕ чіпаємо `[class*="chat-room"]` цілком! до нього входить
-         `chat-room__viewer-card` — невидимий шар профілю користувача з
-         `pointer-events:none`, що займає ВЕСЬ чат. Якщо дати йому чорне
-         тло, він перекриває всі повідомлення (DOM є, а око нічого не бачить). */
+      
       'html.haki-twitch section[class*="chat-room"],',
       'html.haki-twitch [class*="chat-room__content"],',
       'html.haki-twitch [class*="chat-wysiwyg"],',
@@ -402,11 +359,7 @@
       'html.haki-twitch [class*="side-nav-card"] { background-color: #000 !important; }',
       'html.haki-twitch [class*="side-nav-card"]:hover,',
       'html.haki-twitch [class*="side-nav-card"]:focus { background-color: #0a0a0a !important; }',
-      /* НЕ перекриваємо кольори в чаті! v3.2.0 ставила #d3d3d9 на всі
-         дочірні елементи — імена, емодзі й посилання злились в одну сіру
-         масу, а на деяких стрімах чат виглядав порожньою чорною панеллю.
-         Лишаємо рідні кольори Twitch недоторканими. Тільки трохи
-         збільшуємо вагу тексту, щоб він не був «прозорим». */
+      
       'html.haki-twitch [class*="chat-line__message"] {',
       '  background-color: transparent !important;',
       '  font-weight: 400 !important; opacity: 1 !important;',
@@ -418,10 +371,7 @@
     (document.head || root || document).appendChild(style);
   }
 
-  /* Rezka — особливий випадок (додано 2026-11-23).
-     Сайт сам має нічну тему з темно-синім фоном. Загальна інверція робила
-     її яскраво-білою. Для rezka-ua.pub та дзеркал замість інверсії
-     підключаємо окремий rezka.css, який сам стежить за класом body. */
+  
   function runDetection() {
     strip();
 
@@ -469,9 +419,7 @@
     });
   }
 
-  /* Дивимось на те, що реально видно у вікні: elementFromPoint + найближчий
-     непрозорий предок. Це ловить білі сайти, у яких body прозорий, а фон
-     заданий глибше (раніше такі сторінки лишались білими). */
+  
   function visibleBackgrounds() {
     var pts = [[0.5, 0.45], [0.12, 0.2], [0.88, 0.2], [0.5, 0.85], [0.12, 0.72], [0.88, 0.72]];
     var out = [];
@@ -507,15 +455,13 @@
       var l = luminance(c);
       return l !== null && l > 0.58;
     });
-    /* Сірі сайти: фон не білий, але й не чорний (#161617 … #555).
-       Їх не інвертуємо — просто перефарбовуємо поверхні в #000. */
+    
     var isGray = vis.length > 0 && vis.every(function (c) {
       var l = luminance(c);
       return l !== null && l >= 0.02 && l <= 0.36;
     });
 
-    /* Якщо непрозорого фону не знайдено, браузер малює біле полотно —
-       це теж світла сторінка (наприклад, example.com). */
+    
     var fallbackLight = vis.length === 0 && !schemeDark;
 
     if (isLight || fallbackLight) {
@@ -540,7 +486,7 @@
 
   function retry() {
     if (!enabled) return;
-    evaluate(false);          // до завантаження тільки додаємо, не знімаємо
+    evaluate(false);
     ticks++;
     if (!loaded && ticks < 25) window.setTimeout(retry, 100);
   }
@@ -569,13 +515,10 @@
     retry();
   }
   window.addEventListener('load', finish, { once: true });
-  window.setTimeout(finish, 3000); // страхування, якщо load не спрацює
+  window.setTimeout(finish, 3000);
   window.setTimeout(injectShadowStyles, 4000);
 
-  /* Вузький спостерігач ТІЛЬКИ на додані вузли з shadow root.
-     Не читає getComputedStyle і не дивиться на class/style — саме це
-     2026-11-23 підвішувало Kleinanzeigen. Тут лише пошук нових хостів
-     і відкладене вставлення одного <style>. */
+  
   if (window.MutationObserver && !inFrame) {
     var shadowTimer = null;
     var shadowObserver = new MutationObserver(function (list) {
@@ -603,10 +546,7 @@
     shadowObserver.observe(document.documentElement, { childList: true, subtree: true });
   }
 
-  /* НЕ додаємо MutationObserver на class/style!
-     2026-11-23: спостерігач реагував на тисячі змін атрибутів Kleinanzeigen
-     і кожного разу викликав getComputedStyle (forced reflow). Це підвішувало
-     сторінку. Повторних перевірок вище (до load + через 3 сек) достатньо. */
+  
   }
 
   function setEnabled(on) {
@@ -619,8 +559,7 @@
     }
   }
 
-  /* Початковий стан лежить у chrome.storage_local — ним керують окремо
-     сторінка налаштувань, контекстне меню й гаряча клавіша. */
+  
   var query = {};
   query[SITES_KEY] = true;
   chrome.storage.local.get(query, function (data) {
@@ -631,8 +570,7 @@
     if (msg && msg.type === 'haki-sites-changed') setEnabled(!!msg.enabled);
   });
 
-  /* Домовленість між сторінкою та iframe: батько повідомляє, чи він
-     інвертує. Без цього вбудовані темні сайти ставали білими. */
+  
   window.addEventListener('message', function (e) {
     var d = e && e.data;
     if (!d || typeof d !== 'object') return;

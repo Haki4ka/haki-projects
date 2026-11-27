@@ -1,4 +1,4 @@
-/* Haki Shield — Twitch in-stream ad removal (v1.8.0).
+/* Haki Shield — Twitch in-stream ad removal (v1.8.9).
    Our own implementation. Twitch fetches HLS playlists inside a blob Worker,
    so the hook must be installed BEFORE that worker's importScripts() runs.
    A bounded ad break is removed from the playlist; otherwise ad URLs are
@@ -10,7 +10,9 @@
 
   var enabled = true;
   var videoEnabled = true;
-  var stats = { tokens: 0, backups: 0, playlists: 0, segmentsRemoved: 0, adRequests: 0, workers: 0 };
+  var stats = { tokens: 0, backups: 0, backupAttempts: 0, backupFailures: 0, timeouts: 0,
+    playlists: 0, segmentsRemoved: 0, adRequests: 0, workers: 0,
+    lastBackupType: null, lastBackupAt: 0 };
   var workers = [];
   var pageAdUris = Object.create(null);
   var pageLiveUri = null;
@@ -48,6 +50,32 @@
      fetch hook substitute a live segment. */
   function cleanHls(text, cache, stat) {
     if (!text || text.indexOf('#EXTM3U') === -1) return text;
+    /* Fast path for ordinary live playlists: no Twitch ad markers means there
+       is nothing to rewrite. Keep the cached live segment fresh first, because
+       an unbounded ad break later depends on it. */
+    if (!/stitched-ad|maf-ad|CUE-OUT|adsquared|\/_404\/|processing|Amazon\||DCM,/i.test(text)) {
+      var fastLines = text.split(/\r?\n/);
+      var fastInf = null;
+      var fastPdt = null;
+      var fastUri = null;
+      for (var fi = 0; fi < fastLines.length; fi++) {
+        var fl = fastLines[fi];
+        if (/^#EXTINF:/i.test(fl)) fastInf = fl;
+        if (/^#EXT-X-PROGRAM-DATE-TIME:/i.test(fl)) fastPdt = fl;
+        if (fl.trim() && !/^#/.test(fl)) fastUri = fl;
+      }
+      if (fastUri) {
+        try {
+          self.__hakiLiveUri = fastUri;
+          self.__hakiLiveInf = fastInf;
+          self.__hakiLivePdt = fastPdt;
+        } catch (e) { void e; }
+        if (typeof self.postMessage === 'function' && self.__hakiShieldReport) {
+          self.postMessage({ __hakiLiveUri: fastUri });
+        }
+      }
+      return text;
+    }
     cache = cache || {};
     stat = stat || { playlists: 0, segmentsRemoved: 0 };
     var lines = text.split(/\r?\n/);
@@ -209,7 +237,35 @@
           fixed = true;
           changed = true;
         }
-        if (!fixed) out[k] = item.ad;
+        if (!fixed) {
+          out[k] = item.ad;
+          /* Pre-roll has no live segment to clone. Shorten the slot's EXTINF
+             instead of leaving a 2-second ad duration: the player runs through
+             the break in a fraction of a second and starts the stream at once.
+             The cached ad URL is still answered with a null TS by the fetch
+             hook, so no ad picture is ever shown. */
+          if (item.infIndex >= 0 && /^#EXTINF:/i.test(out[item.infIndex] || '')) {
+            var shortened = out[item.infIndex].replace(/^#EXTINF:\s*[\d.]+/i, '#EXTINF:0.1');
+            if (shortened !== out[item.infIndex]) {
+              out[item.infIndex] = shortened;
+              changed = true;
+            }
+          }
+        }
+      }
+    }
+
+    /* The player counts down the break from the DATERANGE DURATION, not from
+       our EXTINF values. Shorten ad-break metadata as well, otherwise it still
+       waits out the whole 10-second (or longer) break before starting. */
+    if (changed || removed) {
+      for (var m = 0; m < out.length; m++) {
+        var tag = out[m];
+        if (typeof tag === 'string' && /^#EXT-X-DATERANGE:/i.test(tag) &&
+            /CLASS="twitch-(stitched-ad|ad-quartile)"/i.test(tag) &&
+            /DURATION=[\d.]+/i.test(tag)) {
+          out[m] = tag.replace(/DURATION=[\d.]+/i, 'DURATION=0.1');
+        }
       }
     }
 
@@ -356,9 +412,25 @@
   /* Page world: GQL token rewrite, ad URI fallback, worker patching. */
   workerHookPage();
 
+  function adKey(url) {
+    try {
+      var u = new URL(String(url), location.href);
+      return u.origin + u.pathname;
+    } catch (e) {
+      return String(url || '');
+    }
+  }
+
+  /* Ad URLs can arrive from the worker in a different form than the one the
+     page later fetches. Match on origin+path too, not only on the full URL. */
   function isPageAd(url) {
     var hit = pageAdUris[url];
-    return !!(hit && Date.now() - hit.t < 30000);
+    if (hit && Date.now() - hit.t < 30000) return true;
+    var key = adKey(url);
+    for (var k in pageAdUris) {
+      if (adKey(k) === key && Date.now() - pageAdUris[k].t < 30000) return true;
+    }
+    return false;
   }
 
   function workerHookPage() {
@@ -459,15 +531,28 @@
             types = [backupType].concat(types.filter(function (t) { return t !== backupType; }));
           }
           return (async function () {
+            /* Keep token replacement from stalling playback: one slow Twitch
+               response must not delay the stream for tens of seconds. */
+            var startedAt = Date.now();
             for (var k = 0; k < types.length; k++) {
+              if (Date.now() - startedAt > 12000) { stats.backupFailures++; break; }
+              stats.backupAttempts++;
               try {
                 var altBody = bodyWithType(originalBody, types[k]);
-                var alt = await patchedFetch.call(window, url, Object.assign({}, init, { body: altBody }));
+                var controller = new AbortController();
+                var timer = setTimeout(function () { controller.abort(); stats.timeouts++; }, 5000);
+                var alt = await patchedFetch.call(window, url, Object.assign({}, init || {}, {
+                  body: altBody,
+                  signal: controller.signal
+                }));
+                clearTimeout(timer);
                 var altJson = await alt.json();
                 var altToken = tokenOf(altJson);
                 if (altToken && !adsOn(altToken)) {
                   backupType = types[k];
                   backupAt = Date.now();
+                  stats.lastBackupType = types[k];
+                  stats.lastBackupAt = Date.now();
                   stats.backups++;
                   if (json.data && json.data.streamPlaybackAccessToken) json.data.streamPlaybackAccessToken = altToken;
                   else json.streamPlaybackAccessToken = altToken;
@@ -480,7 +565,10 @@
                     status: res.status, statusText: res.statusText, headers: headers
                   });
                 }
-              } catch (e) { void e; }
+              } catch (e) {
+                stats.backupFailures++;
+                void e;
+              }
             }
             return res;
           })();
@@ -541,7 +629,7 @@
         if (!/PlaybackAccessToken/i.test(op.operationName || '') && hash !== TOKEN_HASH) continue;
         var v = op.variables || (op.extensions && op.extensions.variables);
         if (!v) continue;
-        if (v.playerType !== 'popout') { v.playerType = 'popout'; changed = true; }
+        if (v.playerType !== 'embed') { v.playerType = 'embed'; changed = true; }
       }
       return changed ? JSON.stringify(data) : body;
     } catch (e) { return body; }
@@ -554,6 +642,9 @@
       var src = String(url);
       var original = null;
       if (/^blob:/i.test(src)) {
+        /* A synchronous XHR must NOT have a timeout: Brave throws
+           InvalidAccessError on open() and the whole worker patch is skipped.
+           Blob URLs are local, so this read is fast without a timeout. */
         var x = new XMLHttpRequest();
         x.open('GET', src, false);
         x.send();
@@ -575,12 +666,10 @@
           if (!d) return;
           if (d.__hakiAdUri) {
             var uri = d.__hakiAdUri;
-            if (!pageAdUris[uri]) {
-              pageAdUris[uri] = { t: Date.now() };
-              reportBlocked(1);
-            } else {
-              pageAdUris[uri].t = Date.now();
-            }
+            var key = adKey(uri);
+            if (!pageAdUris[uri] && !pageAdUris[key]) reportBlocked(1);
+            pageAdUris[uri] = { t: Date.now() };
+            pageAdUris[key] = { t: Date.now() };
           }
           if (d.__hakiLiveUri) {
             pageLiveUri = d.__hakiLiveUri;
@@ -606,8 +695,10 @@
     /* cleanHls() also runs on the main thread now; accept its local notices. */
     if (d.__hakiAdUri) {
       var uri = d.__hakiAdUri;
-      if (!pageAdUris[uri]) { pageAdUris[uri] = { t: Date.now() }; reportBlocked(1); }
-      else pageAdUris[uri].t = Date.now();
+      var key = adKey(uri);
+      if (!pageAdUris[uri] && !pageAdUris[key]) reportBlocked(1);
+      pageAdUris[uri] = { t: Date.now() };
+      pageAdUris[key] = { t: Date.now() };
     }
     if (d.__hakiLiveUri) pageLiveUri = d.__hakiLiveUri;
     if (d.source !== 'haki-shield' || d.type !== 'config') return;
@@ -619,11 +710,25 @@
   });
 
   window.__hakiShield = {
-    version: '1.8.0',
+    version: '1.8.9',
     stats: stats,
     cleanHls: cleanHls,
     adUris: pageAdUris,
+    adKeys: function () { return Object.keys(pageAdUris); },
     isEnabled: function () { return enabled; },
-    isVideoEnabled: function () { return videoEnabled; }
+    isVideoEnabled: function () { return videoEnabled; },
+    /* Lightweight diagnostics only: no console output, no network calls. */
+    diag: function () {
+      return {
+        version: '1.8.9',
+        enabled: enabled,
+        videoEnabled: videoEnabled,
+        adUriCount: Object.keys(pageAdUris).length,
+        stats: stats,
+        lastBackupType: stats.lastBackupType,
+        lastBackupAt: stats.lastBackupAt,
+        workerPatches: stats.workers
+      };
+    }
   };
 })();

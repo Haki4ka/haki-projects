@@ -174,7 +174,7 @@ async function bumpAllVersions(oldVersion, newVersion) {
   }
   const readme = await fs.readFile(README, 'utf8');
   const esc = oldVersion.replace(/\./g, '\\.');
-  const header = new RegExp('(Версія \\*\\*)' + esc + '(\\*\\*)');
+  const header = new RegExp('(Version \\*\\*)' + esc + '(\\*\\*)');
   if (header.test(readme)) {
     await fs.writeFile(README, readme.replace(header, '$1' + newVersion + '$2'), 'utf8');
   } else {

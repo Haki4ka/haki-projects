@@ -1,79 +1,35 @@
-# Haki Shield — changelog
+# Changelog
 
-Усі версії написані нами з нуля. Дата — за локальним часом (Європа/Київ).
-Джерело даних EasyList і його ліцензія — у `THIRD-PARTY.md`.
+## 1.8.9
+- Removed temporary playlist diagnostics from the shipped code.
 
-## 1.8.0 — 26.11.2026
-- Twitch: виправлено рекламу, яка лишалася видимою, і довгий старт стріму.
-- Причина: пре-рол починається раніше, ніж у плейлисті з'являється живий сегмент,
-  тому підміна рекламного сегмента не мала чим підмінити й грала 30-секундний ролик.
-- Живий сегмент, його `#EXTINF` і `#EXT-X-PROGRAM-DATE-TIME` тепер кешуються між
-  оновленнями плейлиста й використовуються як запасні з першого ж рядка.
-- Рекламні URL зіставляються за `origin + pathname`, тому зміна параметрів запиту
-  (наприклад `acmb`) більше не дає рекламі проскочити.
-- Очищення `.m3u8` додано також у головний потік (`fetch` і `XHR`) — для збірок
-  плеєра, які читають плейлисти не в blob-Worker-і. Логіка одна для всіх site-ів.
-- Регресій для YouTube, YouTube Music, Kleinanzeigen, Rezka, TradingView немає:
-  Twitch-хук і раніше виходив на цих доменах.
+## 1.8.8
+- Playback token now uses `playerType:"embed"`. Twitch starts in about 15-18 s instead of 22-23 s; 1920x1080 playback is unchanged.
 
-## 1.7.0 — 26.11.2026
-- Універсальний захист від реклами **всередині відеоплеєра**, не під один сайт.
-- Діагноз за реальними записами: спершу нормальна відео-адреса зі свого хоста, потім
-  VAST-запит `/do2/<hash>/vast`, після нього підміна `video.src` на
-  `/video/ol_<hash>.mp4` з чужого хоста. Це дає рекламу і на старті, і в середині,
-  і «персоналізацію» мовою за IP.
-- Новий static ruleset `playerads.json` (10 правил): VAST/адтаг/SDK-скрипти й
-  рекламні mp4. Ті самі виключення для Twitch, TradingView, YouTube, Kleinanzeigen.
-- Новий `player.js` (MAIN world, усі сайти): тримає перший легальний хост медіа,
-  нейтралізує VAST у `fetch`/`XHR` і ігнорує підміну `video.src` / `<source src>`.
-  Керується тим самим перемикачем **Video ads**.
-- `bridge.js` тепер підключений на всіх сайтах (раніше лише на Twitch), щоб MAIN-world
-  модулі діставали стан і могли рахувати заблоковане.
-- **Не блоковано** `remote_control.php`: тест показав, що це керування самим потоком —
-  при блокуванні контент ставав на `currentTime=0`, `readyState=3`.
-- Перевірено в 9222 + Playwright: VAST заблоковано, підмін `src` немає, контент грає
-  до кінця; Twitch/TradingView/OLED-сайти не зачеплені перевіркою регресій.
+## 1.8.7 / 1.8.6 / 1.8.5
+- Short-lived metadata experiments. Reverted after measurement.
 
-## 1.6.1 — 26.11.2026
-- Щотижневе оновлення EasyList запущено за дозволом користувача.
-- Джерело змінилося: `b62d2256…` → `a3cddc45…`. Перезібрано `universal.json` (25 000 правил).
-- Версію збільшено автоматично: вбудовані фільтри MV3 підтягуються тільки з новою версією.
-- Додано `tools/update-easylist.mjs`, `tools/run-easylist-update.ps1`.
-- Завдання Planner «Haki Shield - Weekly EasyList»: неділя 04:00 + вхід у систему,
-  з 7-денним захистом від повторного збільшення версії.
-- Журнал: `AI Lab\logs\easylist-update.log`. Бекапи: `Haki Shield Backups\easylist\`.
-- Перевірка: `npm run verify` → `ALL_OK` (47 + 25 000, 0 помилок); 0 правил ціляться
-  на захищені домени, усі 25 000 мають виключення.
+## 1.8.4
+- Fixed the worker XHR timeout that had disabled ad removal.
 
-## 1.6.0 — 25.11.2026
-- Другий статичний ruleset `universal`: 25 000 правил, сконвертованих власним
-  `tools/build-filters.mjs` із EasyList (консервативні `||domain^`, без регексів і скриптлетів).
-- Старі 47 ручних правил і Twitch-хуки не змінено.
-- Кожне універсальне правило має `excludedInitiatorDomains` для Twitch, TradingView,
-  YouTube і Kleinanzeigen; цільові запити на ці домени не блокуються.
-- Окремий перемикач **Universal ads** у popup/options.
-- Перевірено в 9222 і основному Brave: Twitch ~1984 мс, 0 банерів; без регресій.
+## 1.8.0 - 1.8.3
+- Cached the last live HLS segment so a pre-roll with no live segment no longer stalls startup.
+- Matched ad URLs by origin and path; cleaned playlists in the page as well as in workers.
 
-## 1.5.1 — 25.11.2026
-- Виправлено довге завантаження стріма: рекламний блок без явного кінця не вирізався,
-  а підмінявся останнім живим сегментом (`liveUri`/`liveInf`/`livePdt`).
-- Додано `adSeen >= 12` і same-host перевірку.
+## 1.7.0
+- Universal video-ad layer: `playerads.json` and `player.js`.
+- VAST requests and foreign `video.src` swaps are rejected across sites.
 
-## 1.5.0 — 25.11.2026
-- Пер-сайтовий лічильник (`siteCounts`, `blockedTotal`) тільки в пам'яті service worker.
-- Прибрано `mobile_web` із BACKUP_TYPES (обмежував стрім до 360p).
+## 1.6.1
+- Weekly EasyList refresh with SHA-256 check, backup, rebuild and validation.
 
-## 1.4.0 — 25.11.2026
-- Подвійний рев'ю коду: виправлено null-пакет TS, обробку `message` у Worker,
-  TTL кешу сегментів, regex-анкери, «Disable on this site» для DNR.
-- Косметика TradingView (без нових DNR-правил) і приховування gift-subs банерів Twitch.
+## 1.6.0
+- `universal` ruleset with conservative EasyList host rules and exclusions for hand-tuned sites.
+- Separate **Universal ads** switch.
 
-## 1.3.0 — 25.11.2026
-- Допрацювання pre-roll: blob-Worker читається синхронним XHR до `importScripts`.
-- Запасні типи токена `embed → autoplay → site`; вирізання рекламних сегментів
-  замінено підміною порожнім MPEG-TS.
+## 1.5.x
+- Per-site blocked counter.
+- Faster Twitch start; no `mobile_web` token, so no 360p fallback.
 
-## 1.0.0 — 25.11.2026
-- Перша власна версія: MV3, 47 ручних DNR-правил, Twitch-хуки (`world: MAIN`),
-  popup/options англійською, іконки, README українською.
-- Не форк Purple: жоден файл чужого розширення не скопійовано.
+## 1.0 - 1.4
+- Initial Manifest V3 blocker, Twitch worker hooks and cosmetic rules.
