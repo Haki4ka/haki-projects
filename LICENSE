@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 Haki
+Copyright (c) 2026 Haki4ka
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,5 +20,5 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Note: third-party filter data included in `haki-shield/universal.json` is not
-covered by this license. See `haki-shield/THIRD-PARTY.md`.
+EasyList-derived data in haki-shield/universal.json is licensed separately
+under CC BY-SA 3.0. See haki-shield/THIRD-PARTY.md.
