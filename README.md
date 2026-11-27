@@ -1,12 +1,12 @@
 # Haki Projects
 
-Two browser extensions for Brave and Chromium, plus the small tools that check their filter rules.
+Two browser extensions for Chromium-based browsers, plus the small tools that check their filter rules. Built and tested in Brave.
 
 | Folder | Description |
 |---|---|
 | `haki-shield/` | Manifest V3 ad blocker: manual rules, an EasyList-derived layer, video-ad protection and Twitch stream hooks. |
-| `haki-oled-switcher/` | Toolbar button for a pure-black Brave theme and independent site darkening. |
-| `haki-oled-theme/` | Companion deep-black theme for Brave. |
+| `haki-oled-switcher/` | Toolbar button for a pure-black browser theme and independent site darkening. |
+| `haki-oled-theme/` | Companion deep-black theme, tuned for Brave. |
 | `tools/` | Converter and rule checks used during development. |
 
 ## Install
