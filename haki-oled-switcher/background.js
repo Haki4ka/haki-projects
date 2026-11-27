@@ -5,7 +5,7 @@
    The popup also edits a gray-mode list: domains there get dark surfaces
    without inversion. Alt+Shift+D toggles BOTH main switches at once. */
 
-const THEME_ID = 'embggbpfahheclcjifbkcejahhjnfcfc';
+const THEME_ID = 'pdbcicihgbipdocokmncbakabphbmipi';
 const SITES_KEY = 'sitesEnabled';
 const GRAY_KEY = 'graySites';
 const SITES_MENU = 'haki-toggle-sites';
