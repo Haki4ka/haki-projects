@@ -29,7 +29,7 @@ const PROJECT = path.resolve(ROOT, '..');
 
 const BUILDER = path.join(HERE, 'build-filters.mjs');
 const STATE_FILE = path.join(HERE, 'easylist-state.json');
-const LOG_FILE = path.join(PROJECT, 'AI Lab', 'logs', 'easylist-update.log');
+const LOG_FILE = path.join(PROJECT, 'tools', 'logs', 'easylist-update.log');
 const BACKUP_ROOT = path.join(PROJECT, 'Haki Shield Backups', 'easylist');
 
 const UNIVERSAL = path.join(ROOT, 'universal.json');
