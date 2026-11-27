@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Analyse an Adblock-style filter list and compare it with our DNR ruleset.
+"""Analyse an Adblock-style filter list and compare it with the DNR ruleset.
 
 Learning tool, standard library only. Useful for the (deferred) weekly
-EasyList refresh: it tells us how many host-anchor rules a new list would
-yield, before we regenerate universal.json.
+EasyList refresh: it reports how many host-anchor rules a new list would
+yield, before regenerating universal.json.
 
 Usage:
   python analyze_easylist.py --file easylist.txt
@@ -84,7 +84,7 @@ def classify(lines: Iterable[str]) -> tuple[Counter, set[str]]:
 
 
 def dn_r_domains(path: Path) -> set[str]:
-    """Pull host names out of our generated urlFilter values."""
+    """Pull host names out of generated urlFilter values."""
     data = json.loads(path.read_text(encoding="utf-8"))
     out: set[str] = set()
     for rule in data:
@@ -132,7 +132,7 @@ def main() -> int:
 
     if args.rules:
         ours = dn_r_domains(args.rules)
-        print(f"OUR RULE DOMAINS: {len(ours)}")
+        print(f"RULE DOMAINS: {len(ours)}")
         print(f"MISSING (in list, not in rules): {len(domains - ours)}")
         print(f"EXTRA   (in rules, not in list): {len(ours - domains)}")
         for d in sorted(domains - ours)[:10]:

@@ -1,5 +1,5 @@
 /* Haki Shield — Twitch in-stream ad removal (v1.9.2).
-   Our own implementation. Twitch fetches HLS playlists inside a blob Worker,
+   Twitch fetches HLS playlists inside a blob Worker,
    so the hook must be installed BEFORE that worker's importScripts() runs.
    Bounded breaks are removed; for pre-rolls the real segment bytes stay intact
    (Twitch decodes them in WASM) but the declared EXTINF/DATERANGE duration is
@@ -128,7 +128,7 @@
         /,(Amazon\||DCM|Ad|Advertisement)/i.test(line);
 
       /* Remember the last real live segment. An ad break without an explicit
-         end marker cannot be deleted safely, so later we clone this segment
+         end marker cannot be deleted safely, so this segment is cloned
          (with its normal duration) over the ad slot instead of waiting out
          a 30-second EXTINF. Never cache an ad's own duration as "live". */
       if (!inAd && !adTitleTag && /^#EXTINF:/i.test(line)) liveInf = line;
@@ -290,7 +290,7 @@
     }
 
     /* The player counts down the break from the DATERANGE DURATION, not from
-       our EXTINF values. Shorten ad-break metadata as well, otherwise it still
+       the EXTINF values. Shorten ad-break metadata as well, otherwise it still
        waits out the whole 10-second (or longer) break before starting. */
     if (changed || removed) {
       for (var m = 0; m < out.length; m++) {
@@ -592,7 +592,7 @@
   }
 
   var TOKEN_HASH = 'ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9';
-  /* Kept as a hook point only: every playerType rewrite we tried
+  /* Kept as a hook point only: every playerType rewrite that was tried
      (popout/embed/autoplay) sent some channels through a slow server-side ad
      hand-off. The untouched token starts those channels in ~1 s. */
   function rewriteToken(body) {

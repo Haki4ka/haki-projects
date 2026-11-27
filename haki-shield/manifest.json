@@ -3,7 +3,7 @@
   "name": "Haki Shield — Ad Blocker",
   "short_name": "Haki Shield",
   "version": "1.9.2",
-  "description": "Our own blocker: network ads, banners, in-player video ads, Twitch stream ads and an opt-in universal filter layer. Made by Haki.",
+  "description": "Ad blocker for Chromium and Brave: network rules, EasyList layer, video ads and Twitch streams.",
   "permissions": [
     "declarativeNetRequest",
     "declarativeNetRequestFeedback",

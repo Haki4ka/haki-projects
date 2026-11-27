@@ -1,5 +1,5 @@
 /* Haki Shield v1.9.2 — universal in-player ad guard.
-   Written by us. Runs in the page's MAIN world so it can stop a player from
+   Runs in the page's MAIN world so it can stop a player from
    swapping the real video source for an ad creative. Nothing imported. */
 
 (function () {
@@ -39,7 +39,7 @@
   }
 
   /* High-confidence ad shapes. Deliberately NOT remote_control.php: on the
-     site we measured that endpoint is part of the real stream control and
+     site testing showed that endpoint is part of the real stream control and
      blocking it stops the content too. */
   function strongAd(url) {
     return /\/video\/ol_[0-9a-f]{12,}[.]mp4/i.test(url) ||

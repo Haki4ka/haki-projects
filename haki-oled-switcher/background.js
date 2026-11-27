@@ -86,7 +86,7 @@ function tellTabs(on) {
     for (const tab of tabs) {
       if (!tab.id) continue;
       chrome.tabs.sendMessage(tab.id, { type: 'haki-sites-changed', enabled: on }, function () {
-        void chrome.runtime.lastError; // tabs without our script are fine
+        void chrome.runtime.lastError; // tabs without the content script are fine
       });
     }
   });

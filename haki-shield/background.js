@@ -1,5 +1,5 @@
-/* Haki Shield v1.9.2 — our own blocker.
-   All logic here is written by us; no foreign extension code is used. */
+/* Haki Shield v1.9.2 — ad blocker.
+   Local logic only; no foreign extension code is used. */
 
 const DEFAULTS = {
   enabled: true,
@@ -10,7 +10,7 @@ const DEFAULTS = {
   disabledSites: []
 };
 
-/* Three independent static rulesets: our hand-written rules, the converted
+/* Three independent static rulesets: hand-written rules, the converted
    public list, and the universal in-player ad endpoints. Never mix them into
    one file — the proven Twitch rules must stay readable and rollback-able. */
 const ALL_RULESETS = ['ads', 'universal', 'playerads'];
@@ -222,7 +222,7 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
 });
 
 /* Feedback permission is present, so every DNR block can be attributed to the
-   site that started it. Ignore our own session "allow" rules (ids 1000+). */
+   site that started it. Ignore session "allow" rules (ids 1000+). */
 try {
   chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(function (info) {
     const rule = info && info.rule;

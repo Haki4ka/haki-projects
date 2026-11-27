@@ -1,47 +1,24 @@
-# Third-party data used by Haki Shield
+# Third-party data
 
-Our extension code, converter, UI and Twitch logic are written by us.
-This file records the one external data source we convert at build time.
+The extension code, UI, converter and Twitch logic are written by the project author. This file documents the one external data source used to build `universal.json`.
 
 ## EasyList
 
 - Source: https://easylist.to/easylist/easylist.txt
 - Authors: The EasyList authors (easylist.to/)
-- Upstream licence: dual **GPLv3-or-later** or **CC BY-SA 3.0-or-later**, at our option.
-- **Our election: CC BY-SA 3.0-or-later** for the derived data file `universal.json`.
-  We choose the Creative Commons arm so our own extension code stays ours.
-- Required attribution: "The EasyList authors (easylist.to/)".
-- Source SHA-256 at last build: `8db96c63ea1684c6e10569bef3d03acf8150b3cd9ed0ae95ad7df241ac120772`
-- Rules emitted: 25000
-- Built: 2026-11-27T10:07:39.396Z
+- Licence: GPLv3-or-later or CC BY-SA 3.0-or-later, at the user's option.
+- Election for the derived `universal.json`: **CC BY-SA 3.0-or-later**.
+- Attribution: "The EasyList authors (easylist.to/)".
+- Upstream header: `! Version: 202611271003`, `! Title: EasyList`, `! Homepage: https://easylist.to/`, `! Licence: https://easylist.to/pages/licence.html`
+- Source SHA-256: `8db96c63ea1684c6e10569bef3d03acf8150b3cd9ed0ae95ad7df241ac120772`
+- Rules emitted: 25,000. Built: 2026-11-27T10:07:39.452Z.
 
-### Upstream notice (verbatim header lines)
+## Conversion
 
-> ! Version: 202611271003
-> ! Title: EasyList
-> ! Homepage: https://easylist.to/
-> ! Licence: https://easylist.to/pages/licence.html
+Kept: host-anchored `||domain^` blocks with optional `$third-party` and resource types. A bare `@@||domain^` removes a domain from the generated list.
 
-### What we keep and what we drop
+Dropped: path, query and port rules, regex rules, cosmetic `##` rules, scriptlets, `$redirect`, `$csp`, `$removeparam`, `$domain`, wildcard domains, IP addresses and bare public suffixes.
 
-Kept: only host-anchored `||domain^` block rules, optionally with
-`$third-party` and ordinary resource-type modifiers. Exceptions `@@||domain^`
-remove a domain from our list.
+Every generated rule excludes `twitch.tv`, `tradingview.com`, `youtube.com` and `kleinanzeigen.de` as initiator. Requests to those domains are never blocked by this layer.
 
-Dropped: path-, query- or port-scoped rules, regex rules, cosmetic `##` rules,
-scriptlets, `$redirect`, `$csp`, `$removeparam`, `$domain=`, wildcard domains,
-IP addresses and bare public suffixes. We never widen a narrow rule to a
-whole-domain block.
-
-### Protection of existing behaviour
-
-Every emitted rule carries `excludedInitiatorDomains` for
-`twitch.tv`, `tradingview.com`, `youtube.com`, `kleinanzeigen.de`, and requests whose
-target is one of those domains are skipped entirely. Twitch, TradingView,
-YouTube and Kleinanzeigen keep their hand-tuned behaviour.
-
-### What we did NOT use
-
-No code was copied from AdGuard's browser extension. We did not use its
-GPLv3 `tsurlfilter`/`dnr-converter` package as a dependency; we only studied
-public documentation. Our converter in `tools/build-filters.mjs` is ours.
+No code from AdGuard extensions or GPLv3 converter packages is used. `tools/build-filters.mjs` is an independent implementation.

@@ -1,4 +1,4 @@
-/* Haki Shield options page — our own UI logic. */
+/* Haki Shield options page — UI logic. */
 
 (function () {
   'use strict';

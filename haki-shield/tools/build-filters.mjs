@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /*
- * Haki Shield — our own build-time filter converter.
+ * Haki Shield — build-time filter converter.
  *
- * It downloads a public Adblock-style filter list and keeps ONLY rules we can
+ * It downloads a public Adblock-style filter list and keeps only rules that can be
  * express safely as declarativeNetRequest host-anchor blocks:
  *
  *   ||example.com^$third-party,script   ->  block requests TO example.com
@@ -12,7 +12,7 @@
  * wildcard domains, IPs and public suffixes. Bare @@ exceptions are honoured.
  *
  * No foreign converter code is used. The AdGuard tsurlfilter converter is
- * GPLv3, so we deliberately do not depend on it or copy from it.
+ * GPLv3, so the converter does not depend on it or copy from it.
  *
  * Usage:
  *   node tools/build-filters.mjs --dry              # analyse, write nothing
@@ -35,7 +35,7 @@ const MAX_RULES = 25000;
 
 /* Requests STARTING on these sites are never touched by the universal layer.
    Subdomains are included by DNR automatically. Twitch/TradingView/YouTube/
-   Kleinanzeigen already have proven, hand-tuned behaviour we must not break. */
+   Kleinanzeigen already have proven, hand-tuned behaviour that must not break. */
 const PROTECTED_INITIATORS = [
   'twitch.tv',
   'tradingview.com',
@@ -274,16 +274,16 @@ async function main() {
 
   const credit = `# Third-party data used by Haki Shield
 
-Our extension code, converter, UI and Twitch logic are written by us.
-This file records the one external data source we convert at build time.
+The extension code, converter, UI and Twitch logic are written by the author.
+This file records the one external data source converted at build time.
 
 ## EasyList
 
 - Source: ${URL}
 - Authors: The EasyList authors (easylist.to/)
-- Upstream licence: dual **GPLv3-or-later** or **CC BY-SA 3.0-or-later**, at our option.
-- **Our election: CC BY-SA 3.0-or-later** for the derived data file \`universal.json\`.
-  We choose the Creative Commons arm so our own extension code stays ours.
+- Upstream licence: dual **GPLv3-or-later** or **CC BY-SA 3.0-or-later**, at the licensee's option.
+- **Licence elected for derived data: CC BY-SA 3.0-or-later** for \`universal.json\`.
+  The Creative Commons arm is elected for the derived data.
 - Required attribution: "The EasyList authors (easylist.to/)".
 - Source SHA-256 at last build: \`${sha256}\`
 - Rules emitted: ${rules.length}
@@ -293,15 +293,15 @@ This file records the one external data source we convert at build time.
 
 ${notice.length ? notice.map((n) => '> ' + n).join('\n') : '> (no licence header lines found in the first 160 lines)'}
 
-### What we keep and what we drop
+### Kept and dropped rules
 
 Kept: only host-anchored \`||domain^\` block rules, optionally with
 \`$third-party\` and ordinary resource-type modifiers. Exceptions \`@@||domain^\`
-remove a domain from our list.
+remove a domain from the list.
 
 Dropped: path-, query- or port-scoped rules, regex rules, cosmetic \`##\` rules,
 scriptlets, \`$redirect\`, \`$csp\`, \`$removeparam\`, \`$domain=\`, wildcard domains,
-IP addresses and bare public suffixes. We never widen a narrow rule to a
+IP addresses and bare public suffixes. Narrow rules are never widened to a
 whole-domain block.
 
 ### Protection of existing behaviour
@@ -311,11 +311,11 @@ ${PROTECTED_INITIATORS.map((d) => `\`${d}\``).join(', ')}, and requests whose
 target is one of those domains are skipped entirely. Twitch, TradingView,
 YouTube and Kleinanzeigen keep their hand-tuned behaviour.
 
-### What we did NOT use
+### Not used
 
-No code was copied from AdGuard's browser extension. We did not use its
-GPLv3 \`tsurlfilter\`/\`dnr-converter\` package as a dependency; we only studied
-public documentation. Our converter in \`tools/build-filters.mjs\` is ours.
+No code was copied from AdGuard's browser extension. Its
+GPLv3 \`tsurlfilter\`/\`dnr-converter\` package was not used as a dependency; only
+public documentation was studied. The converter is in \`tools/build-filters.mjs\`.
 `;
   await fs.writeFile(OUT_CREDIT, credit, 'utf8');
   console.log(`WROTE ${OUT_JSON}`);

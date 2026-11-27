@@ -4,7 +4,7 @@ Version 3.3.2. One toolbar button controls a pure-black Brave theme and site dar
 
 ## Features
 
-- **Theme** toggles the companion `Haki OLED Browser` theme through `chrome.management`.
+- **Theme** toggles the companion `Haki OLED` theme through `chrome.management`.
 - **Sites** darkens light pages without inverting video, images or brand colours.
 - Three site modes: `haki-force-dark` for light pages, `haki-gray` for grey pages, and native dark for pages that are already dark.
 - The popup has an editable gray-mode list. Domains there use dark surfaces without colour inversion; subdomains are included, and open tabs update without a reload.
@@ -22,6 +22,4 @@ The theme and site switches do not affect each other.
 
 ## Install
 
-1. Install `Haki OLED Browser` as an unpacked theme extension.
-2. Load this folder as an unpacked extension.
-3. Pin the toolbar icon if Brave unpins it after an update.
+From the release ZIP, unpack it and load `theme/`, then `switcher/`, as unpacked extensions in `brave://extensions` with developer mode on. In this repository the same folders are `haki-oled-theme/` and `haki-oled-switcher/`. Pin the toolbar icon if Brave unpins it after an update.

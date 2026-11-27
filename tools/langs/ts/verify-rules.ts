@@ -1,5 +1,5 @@
 /**
- * Typed checker for our declarativeNetRequest rulesets.
+ * Typed checker for declarativeNetRequest rulesets.
  *
  * TypeScript earns its place here: a typo in a rule field (or a missing
  * excludedInitiatorDomains entry) would otherwise only show up at runtime,
@@ -36,7 +36,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 function findWorkspaceRoot(from: string): string {
   let current = from;
   for (let i = 0; i < 8; i += 1) {
-    if (path.basename(current) === 'AI Lab') return path.dirname(current);
+    if (path.basename(current) === 'AI Lab' || path.basename(current) === 'tools') return path.dirname(current);
     const parent = path.dirname(current);
     if (parent === current) break;
     current = parent;

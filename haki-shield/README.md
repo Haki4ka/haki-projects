@@ -5,7 +5,7 @@ Ad blocker for Chromium and Brave. Version **1.9.2**.
 ## What it blocks
 
 - Network ads: 47 hand-written rules in `rules.json`.
-- Web ads: 25,000 host rules in `universal.json`, converted from EasyList by our own tool. Twitch, TradingView, YouTube and Kleinanzeigen are excluded.
+- Web ads: 25,000 host rules in `universal.json`, converted from EasyList with the included converter. Twitch, TradingView, YouTube and Kleinanzeigen are excluded.
 - Video ads: `playerads.json` blocks VAST requests and rejects foreign `video.src` swaps after a normal source has loaded.
 - Twitch stream ads: hooks the blob worker, removes stitched ad segments and shortens pre-roll metadata.
 - Banners: high-precision CSS for Twitch and TradingView.
@@ -26,7 +26,7 @@ No build step is needed to use the extension.
 
 ## Updating filters
 
-`tools/update-easylist.mjs` checks EasyList once a week. On a change it backs up, rebuilds `universal.json`, validates the rulesets, bumps the version and writes to `AI Lab/logs/easylist-update.log`. Reload the unpacked extension after a version bump.
+`tools/update-easylist.mjs` checks EasyList once a week. On a change it backs up, rebuilds `universal.json`, validates the rulesets, bumps the version and writes to `logs/easylist-update.log`. Reload the unpacked extension after a version bump.
 
 ## Attribution
 

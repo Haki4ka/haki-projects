@@ -1,5 +1,5 @@
 /* Haki Shield — bridge between extension storage and the page world.
-   Written by us. Runs in the isolated content-script world. */
+   Runs in the isolated content-script world. */
 
 (function () {
   'use strict';
@@ -48,7 +48,7 @@
   });
 
   /* twitch.js runs in MAIN world and cannot use chrome.* directly. It posts
-     one message per newly detected ad; we forward it to the background. */
+     one message per newly detected ad; it is forwarded to the background. */
   window.addEventListener('message', function (e) {
     if (e.source !== window || !e.data || e.data.source !== 'haki-shield') return;
     if (e.data.type !== 'blocked') return;

@@ -3,7 +3,7 @@
  * Haki Shield - safe weekly EasyList refresh.
  *
  * Flow:
- *   1. run our own converter with --dry (no files touched)
+ *   1. run the converter with --dry (no files touched)
  *   2. compare the upstream SHA-256 with the state file
  *   3. if unchanged -> log NO_CHANGE and exit (extension files stay untouched)
  *   4. if changed -> backup, rebuild, validate, bump extension version, log
@@ -13,7 +13,7 @@
  *   node tools/update-easylist.mjs --check    # compare only, write nothing
  *   node tools/update-easylist.mjs --force    # rebuild even if hash is equal
  *
- * No third-party code is imported. Node's own child_process runs our converter.
+ * No third-party code is imported. Node's own child_process runs the converter.
  */
 
 import fs from 'node:fs/promises';
@@ -251,7 +251,7 @@ async function main() {
 
 main().catch(async (error) => {
   const msg = error && error.message ? error.message : String(error);
-  try { await appendLog(`ERROR ${msg.slice(0, 500)}`); } catch { /* nothing else we can do */ }
+  try { await appendLog(`ERROR ${msg.slice(0, 500)}`); } catch { /* no further action possible */ }
   console.error('EASYLIST UPDATE FAILED:', msg);
   process.exitCode = 1;
 });

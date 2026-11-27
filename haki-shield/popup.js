@@ -1,4 +1,4 @@
-/* Haki Shield popup — our own UI logic. */
+/* Haki Shield popup — UI logic. */
 
 (function () {
   'use strict';
