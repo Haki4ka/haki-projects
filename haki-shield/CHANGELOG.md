@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.9.1
+- Weekly EasyList refresh: 25 000 universal static rules rebuilt from the current upstream list.
+- No behaviour changes to the Twitch, TradingView or OLED logic; all rule checks pass.
+
+## 1.9.0
+- Twitch playback tokens are left untouched. Rewriting `playerType` sent some channels through a slow server-side ad hand-off (10-30 s to first frame); the unused backup-retry loop is gone.
+- HLS hooks now recognise Twitch media playlists without `.m3u8` (`playlist.ttvnw.net`, `live-video.net`) and ad segments marked by their `#EXTINF` title (`Amazon|`, `DCM`, `Ad`).
+- Real ad-segment bytes stay intact because Twitch decodes them in WASM; instead the declared `EXTINF`/`DATERANGE` duration is compressed to 0.1 s, so a pre-roll no longer adds ~15 s to startup.
+- A master-playlist URL is never cached as a "live segment", which had made substitutions fetch a playlist as video.
+- 1920x1080 playback and the existing Kleinanzeigen/YouTube/TradingView behaviour are unchanged.
+
 ## 1.8.9
 - Removed temporary playlist diagnostics from the shipped code.
 

@@ -1,4 +1,4 @@
-/* Haki Shield v1.8.9 — banner hiding. Our own CSS, nothing imported. */
+/* Haki Shield v1.9.1 — banner hiding. Our own CSS, nothing imported. */
 
 (function () {
   'use strict';

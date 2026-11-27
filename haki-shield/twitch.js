@@ -1,9 +1,10 @@
-/* Haki Shield — Twitch in-stream ad removal (v1.8.9).
+/* Haki Shield — Twitch in-stream ad removal (v1.9.1).
    Our own implementation. Twitch fetches HLS playlists inside a blob Worker,
    so the hook must be installed BEFORE that worker's importScripts() runs.
-   A bounded ad break is removed from the playlist; otherwise ad URLs are
-   answered with a real live segment (or a valid null TS as fallback), so the
-   player starts at once instead of waiting out a pre-roll. */
+   Bounded breaks are removed; for pre-rolls the real segment bytes stay intact
+   (Twitch decodes them in WASM) but the declared EXTINF/DATERANGE duration is
+   compressed to 0.1 s, so the player starts at once instead of waiting 15 s.
+   A null TS remains only as a last-resort fallback for cached ad URLs. */
 
 (function () {
   'use strict';
@@ -43,6 +44,11 @@
     self.__hakiBlankTs = data;
     return data;
   }
+  /* Twitch media playlists have no .m3u8 in the URL:
+     playlist.ttvnw.net/v1/playlist/<hash>. Recognise every HLS URL shape. */
+  function playlistUrl(url) {
+    return /\.m3u8(\?|$)|usher\.ttvnw\.net|playlist\.ttvnw\.net|live-video\.net/i.test(String(url || ''));
+  }
 
   /* Remove a bounded ad break from the playlist so playback starts at once.
      Only remove when the break has an explicit end marker, is small and the
@@ -64,7 +70,9 @@
         if (/^#EXT-X-PROGRAM-DATE-TIME:/i.test(fl)) fastPdt = fl;
         if (fl.trim() && !/^#/.test(fl)) fastUri = fl;
       }
-      if (fastUri) {
+      /* A master playlist's last line is another .m3u8, not a media segment.
+         Caching it would make every ad substitution fetch a playlist as video. */
+      if (fastUri && !/\.m3u8(\?|$)|playlist\.ttvnw\.net|\/v1\/playlist/i.test(fastUri)) {
         try {
           self.__hakiLiveUri = fastUri;
           self.__hakiLiveInf = fastInf;
@@ -93,6 +101,7 @@
     var livePdt = (typeof self !== 'undefined' && self.__hakiLivePdt) || null;
     var adSeen = 0;
     var adSlots = [];
+    var pendingAdTitle = false;
 
     function cacheKey(uri) {
       try {
@@ -112,12 +121,18 @@
 
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i];
+      /* Twitch marks ad segments in the EXTINF title: #EXTINF:2.000,Amazon|<id>.
+         Their URLs are ordinary CloudFront segment URLs, so the title is the
+         only reliable way to tell them from live segments. */
+      var adTitleTag = /^#EXTINF:/i.test(line) &&
+        /,(Amazon\||DCM|Ad|Advertisement)/i.test(line);
 
       /* Remember the last real live segment. An ad break without an explicit
          end marker cannot be deleted safely, so later we clone this segment
          (with its normal duration) over the ad slot instead of waiting out
-         a 30-second EXTINF. */
-      if (!inAd && /^#EXTINF:/i.test(line)) liveInf = line;
+         a 30-second EXTINF. Never cache an ad's own duration as "live". */
+      if (!inAd && !adTitleTag && /^#EXTINF:/i.test(line)) liveInf = line;
+      if (/^#EXTINF:/i.test(line) && !adTitleTag) pendingAdTitle = false;
       if (!inAd && /^#EXT-X-PROGRAM-DATE-TIME:/i.test(line)) livePdt = line;
 
       if (/^#EXT-X-DATERANGE:/i.test(line) &&
@@ -147,7 +162,23 @@
         continue;
       }
 
+      if (adTitleTag) {
+        pendingAdTitle = true;
+        /* Keep the real ad segment bytes: Twitch decodes them in a WASM worker
+           and any substituted TS breaks it. Compress the declared duration
+           instead, so the player runs through the pod without a 15-s wait.
+           Edit THIS line, not the previous one: the previous line is usually
+           #EXT-X-PROGRAM-DATE-TIME. */
+        var shortInf = line.replace(/^#EXTINF:\s*[\d.]+/i, '#EXTINF:0.1');
+        if (shortInf !== line) {
+          line = shortInf;
+          changed = true;
+        }
+      }
+
       if (!/^#/.test(line) && line.trim()) {
+        var adTitle = pendingAdTitle;
+        pendingAdTitle = false;
         var adPattern = /\/adsquared\/|\/_404\/|\/processing|Amazon\||DCM,/i.test(line);
         var liveAgain = false;
         if (inAd && liveUri && !adPattern) {
@@ -156,7 +187,10 @@
               new URL(liveUri, self.location ? self.location.href : undefined).hostname;
           } catch (e) { void e; }
         }
-        if ((inAd && !liveAgain) || adPattern) {
+        if (adTitle) {
+          /* Real bytes stay in the playlist; only the timing was shortened. */
+          inAd = false;
+        } else if (adPattern || (inAd && !liveAgain)) {
           var adIndex = out.length;
           var infIndex = out.length - 1;
           var pdtIndex = out.length - 2;
@@ -178,12 +212,12 @@
           continue;
         }
         if (liveAgain) inAd = false;
-        liveUri = line;
+        if (!adTitle) liveUri = line;
       }
       out.push(line);
     }
 
-    if (liveUri) {
+    if (liveUri && !/\.m3u8(\?|$)|playlist\.ttvnw\.net|\/v1\/playlist/i.test(liveUri)) {
       try {
         self.__hakiLiveUri = liveUri;
         self.__hakiLiveInf = liveInf;
@@ -318,6 +352,10 @@
       } catch (e) { return url; }
     }
 
+    function playlistUrl(url) {
+      return /\.m3u8(\?|$)|usher\.ttvnw\.net|playlist\.ttvnw\.net|live-video\.net/i.test(String(url || ''));
+    }
+
     var originalFetch = self.fetch;
     self.fetch = function (input, init) {
       var url = typeof input === 'string' ? input : (input && input.url) || '';
@@ -350,7 +388,7 @@
         }
       }
       var promise = originalFetch.call(self, input, init);
-      if (!/\.m3u8(\?|$)/i.test(url)) return promise;
+      if (!playlistUrl(url)) return promise;
 
       return promise.then(function (res) {
         if (!res || !res.clone) return res;
@@ -381,7 +419,7 @@
     };
     XMLHttpRequest.prototype.send = function () {
       var xhr = this;
-      if (self.__hakiEnabled !== false && /\.m3u8(\?|$)/i.test(this.__hakiUrl || '')) {
+      if (self.__hakiEnabled !== false && playlistUrl(this.__hakiUrl || '')) {
         this.addEventListener('load', function () {
           try {
             var text = xhr.responseText;
@@ -436,11 +474,6 @@
   function workerHookPage() {
     var patchedFetch = window.fetch;
     var pageCache = Object.create(null);
-    var backupType = null;
-    var backupAt = 0;
-    /* mobile_web is deliberately excluded: mobile tokens can cap quality at
-       360p on long streams. popout is tried first by rewriteToken(). */
-    var BACKUP_TYPES = ['embed', 'autoplay', 'site'];
 
     function tokenOf(json) {
       if (!json) return null;
@@ -449,21 +482,6 @@
       return null;
     }
     function adsOn(token) { return !!(token && (token.show_ads || token.server_ads)); }
-    function bodyWithType(body, type) {
-      try {
-        var d = JSON.parse(body);
-        var ops = Array.isArray(d) ? d : [d];
-        for (var i = 0; i < ops.length; i++) {
-          var op = ops[i];
-          if (!op) continue;
-          var hash = op.extensions && op.extensions.persistedQuery && op.extensions.persistedQuery.sha256Hash;
-          if (!/PlaybackAccessToken/i.test(op.operationName || '') && hash !== TOKEN_HASH) continue;
-          var v = op.variables || (op.extensions && op.extensions.variables);
-          if (v) v.playerType = type;
-        }
-        return JSON.stringify(d);
-      } catch (e) { return body; }
-    }
 
     window.fetch = function (input, init) {
       var url = typeof input === 'string' ? input : (input && input.url) || '';
@@ -496,7 +514,7 @@
 
       /* Some player builds read playlists on the main thread instead of the
          blob worker. Clean those too, with the same universal routine. */
-      if (videoEnabled && /\.m3u8(\?|$)/i.test(url)) {
+      if (videoEnabled && playlistUrl(url)) {
         return promise.then(function (res) {
           if (!res || !res.clone) return res;
           return res.clone().text().then(function (text) {
@@ -523,55 +541,14 @@
         return res.clone().text().then(function (text) {
           var json;
           try { json = JSON.parse(text); } catch (e) { return res; }
-          if (!adsOn(tokenOf(json))) return res;
-          /* The server handed us an ad token — that is one blocked ad. */
-          reportBlocked(1);
-          var types = BACKUP_TYPES.slice();
-          if (backupType && Date.now() - backupAt < 600000) {
-            types = [backupType].concat(types.filter(function (t) { return t !== backupType; }));
+          if (adsOn(tokenOf(json))) {
+            /* Twitch's own token is left untouched. Rewriting playerType sent
+               some streams through a slow server-side ad hand-off (10-30 s
+               before the first frame). Playlist hooks still remove ad
+               segments if Twitch inserts them in the stream. */
+            reportBlocked(1);
           }
-          return (async function () {
-            /* Keep token replacement from stalling playback: one slow Twitch
-               response must not delay the stream for tens of seconds. */
-            var startedAt = Date.now();
-            for (var k = 0; k < types.length; k++) {
-              if (Date.now() - startedAt > 12000) { stats.backupFailures++; break; }
-              stats.backupAttempts++;
-              try {
-                var altBody = bodyWithType(originalBody, types[k]);
-                var controller = new AbortController();
-                var timer = setTimeout(function () { controller.abort(); stats.timeouts++; }, 5000);
-                var alt = await patchedFetch.call(window, url, Object.assign({}, init || {}, {
-                  body: altBody,
-                  signal: controller.signal
-                }));
-                clearTimeout(timer);
-                var altJson = await alt.json();
-                var altToken = tokenOf(altJson);
-                if (altToken && !adsOn(altToken)) {
-                  backupType = types[k];
-                  backupAt = Date.now();
-                  stats.lastBackupType = types[k];
-                  stats.lastBackupAt = Date.now();
-                  stats.backups++;
-                  if (json.data && json.data.streamPlaybackAccessToken) json.data.streamPlaybackAccessToken = altToken;
-                  else json.streamPlaybackAccessToken = altToken;
-                  var headers = new Headers(res.headers);
-                  ['content-length', 'content-encoding', 'etag', 'last-modified', 'transfer-encoding'].forEach(function (h) {
-                    try { headers.delete(h); } catch (e) { void e; }
-                  });
-                  try { headers.set('content-type', 'application/json'); } catch (e) { void e; }
-                  return new Response(JSON.stringify(json), {
-                    status: res.status, statusText: res.statusText, headers: headers
-                  });
-                }
-              } catch (e) {
-                stats.backupFailures++;
-                void e;
-              }
-            }
-            return res;
-          })();
+          return res;
         }).catch(function () { return res; });
       });
     };
@@ -588,7 +565,7 @@
         var next = rewriteToken(body);
         if (next !== body) { body = next; stats.tokens++; }
       }
-      if (videoEnabled && /\.m3u8(\?|$)/i.test(this.__hakiUrl || '')) {
+      if (videoEnabled && playlistUrl(this.__hakiUrl || '')) {
         this.addEventListener('load', function () {
           try {
             var text = xhr.responseText;
@@ -615,24 +592,11 @@
   }
 
   var TOKEN_HASH = 'ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9';
+  /* Kept as a hook point only: every playerType rewrite we tried
+     (popout/embed/autoplay) sent some channels through a slow server-side ad
+     hand-off. The untouched token starts those channels in ~1 s. */
   function rewriteToken(body) {
-    if (!body || typeof body !== 'string') return body;
-    if (body.indexOf('PlaybackAccessToken') === -1 && body.indexOf(TOKEN_HASH) === -1) return body;
-    try {
-      var data = JSON.parse(body);
-      var ops = Array.isArray(data) ? data : [data];
-      var changed = false;
-      for (var i = 0; i < ops.length; i++) {
-        var op = ops[i];
-        if (!op) continue;
-        var hash = op.extensions && op.extensions.persistedQuery && op.extensions.persistedQuery.sha256Hash;
-        if (!/PlaybackAccessToken/i.test(op.operationName || '') && hash !== TOKEN_HASH) continue;
-        var v = op.variables || (op.extensions && op.extensions.variables);
-        if (!v) continue;
-        if (v.playerType !== 'embed') { v.playerType = 'embed'; changed = true; }
-      }
-      return changed ? JSON.stringify(data) : body;
-    } catch (e) { return body; }
+    return body;
   }
 
   /* Patch blob workers BEFORE importScripts runs. */
@@ -671,7 +635,7 @@
             pageAdUris[uri] = { t: Date.now() };
             pageAdUris[key] = { t: Date.now() };
           }
-          if (d.__hakiLiveUri) {
+          if (d.__hakiLiveUri && !/\.m3u8(\?|$)|playlist\.ttvnw\.net|\/v1\/playlist/i.test(d.__hakiLiveUri)) {
             pageLiveUri = d.__hakiLiveUri;
           }
           if (d.__hakiShieldStats) {
@@ -700,7 +664,7 @@
       pageAdUris[uri] = { t: Date.now() };
       pageAdUris[key] = { t: Date.now() };
     }
-    if (d.__hakiLiveUri) pageLiveUri = d.__hakiLiveUri;
+    if (d.__hakiLiveUri && !/\.m3u8(\?|$)|playlist\.ttvnw\.net|\/v1\/playlist/i.test(d.__hakiLiveUri)) pageLiveUri = d.__hakiLiveUri;
     if (d.source !== 'haki-shield' || d.type !== 'config') return;
     enabled = d.master !== false && !d.siteOff;
     videoEnabled = enabled && d.videoAds !== false;
@@ -710,7 +674,7 @@
   });
 
   window.__hakiShield = {
-    version: '1.8.9',
+    version: '1.9.1',
     stats: stats,
     cleanHls: cleanHls,
     adUris: pageAdUris,
@@ -720,7 +684,7 @@
     /* Lightweight diagnostics only: no console output, no network calls. */
     diag: function () {
       return {
-        version: '1.8.9',
+        version: '1.9.1',
         enabled: enabled,
         videoEnabled: videoEnabled,
         adUriCount: Object.keys(pageAdUris).length,

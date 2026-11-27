@@ -1,12 +1,18 @@
 {
   "url": "https://easylist.to/easylist/easylist.txt",
-  "sha256": "a3cddc45e939d1906df0b71425ca54e754220d536a647de2831590ac14c5966e",
-  "rules": 24998,
-  "version": "1.8.9",
-  "builtAt": "2026-11-26T00:26:26.362Z",
-  "lastCheck": "2026-11-26T00:26:26.362Z",
+  "sha256": "8db96c63ea1684c6e10569bef3d03acf8150b3cd9ed0ae95ad7df241ac120772",
+  "rules": 25000,
+  "version": "1.9.1",
+  "builtAt": "2026-11-27T10:07:39.452Z",
+  "lastCheck": "2026-11-27T10:07:39.452Z",
   "lastCheckResult": "UPDATED",
   "history": [
+    {
+      "at": "2026-11-27T10:07:39.452Z",
+      "sha256": "8db96c63ea1684c6e10569bef3d03acf8150b3cd9ed0ae95ad7df241ac120772",
+      "version": "1.9.1",
+      "rules": 25000
+    },
     {
       "at": "2026-11-26T00:26:26.362Z",
       "sha256": "a3cddc45e939d1906df0b71425ca54e754220d536a647de2831590ac14c5966e",

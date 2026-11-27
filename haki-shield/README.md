@@ -1,11 +1,11 @@
 # Haki Shield
 
-Ad blocker for Chromium and Brave. Version **1.8.9**.
+Ad blocker for Chromium and Brave. Version **1.9.1**.
 
 ## What it blocks
 
 - Network ads: 47 hand-written rules in `rules.json`.
-- Web ads: 24,998 host rules in `universal.json`, converted from EasyList by our own tool. Twitch, TradingView, YouTube and Kleinanzeigen are excluded.
+- Web ads: 25,000 host rules in `universal.json`, converted from EasyList by our own tool. Twitch, TradingView, YouTube and Kleinanzeigen are excluded.
 - Video ads: `playerads.json` blocks VAST requests and rejects foreign `video.src` swaps after a normal source has loaded.
 - Twitch stream ads: hooks the blob worker, removes stitched ad segments and shortens pre-roll metadata.
 - Banners: high-precision CSS for Twitch and TradingView.
