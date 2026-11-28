@@ -66,6 +66,18 @@
       <p class="gray-note">Subdomains are included. Changes apply to open tabs without reloading.</p>
     </section>
 
+    <section class="gray-box" id="excludedBox">
+      <div class="gray-head"><b>Never darken</b><small>Keep the site's own colors</small></div>
+      <div class="gray-list" id="excludedList"><span class="gray-empty" id="excludedEmpty">No custom sites yet.</span></div>
+      <div class="gray-input-row">
+        <input class="gray-input" id="excludedInput" type="text" placeholder="example.com" aria-label="Add excluded site" autocomplete="off" spellcheck="false">
+        <button class="gray-add" id="excludedAdd" type="button" disabled>Add</button>
+      </div>
+      <p class="gray-note">Takes priority over gray mode and auto detection.</p>
+    </section>
+
+    <button class="recheck" id="recheckBtn" type="button">Recheck this page</button>
+
     <footer class="foot">
       <span class="status"><i class="dot" id="statusDot"></i><span id="statusText">Loading…</span></span>
       <kbd title="Turn both ON, press again to turn both OFF">Alt+Shift+D</kbd>

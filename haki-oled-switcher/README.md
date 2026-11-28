@@ -1,21 +1,22 @@
 # Haki OLED Switcher
 
-Version 3.3.2. One toolbar button controls a pure-black browser theme and site darkening independently. Built and tested in Brave.
+Version 3.4.0. One toolbar button controls a pure-black browser theme and site darkening independently. Built and tested in Brave.
 
 ## Features
 
 - **Theme** toggles the companion `Haki OLED` theme through `chrome.management`.
 - **Sites** darkens light pages without inverting video, images or brand colours.
-- Three site modes: `haki-force-dark` for light pages, `haki-gray` for grey pages, and native dark for pages that are already dark.
-- The popup has an editable gray-mode list. Domains there use dark surfaces without colour inversion; subdomains are included, and open tabs update without a reload.
+- Three site modes: `haki-force-dark` for light pages, `haki-gray` for grey pages, and native dark for pages that are already dark. Pages that declare a dark colour scheme keep their own palette; an explicit gray-mode entry still wins.
+- The popup has editable lists. Gray-mode domains use dark surfaces without colour inversion. "Never darken" domains keep their original colours and take priority over every other mode, including special rules. Subdomains are included, and open tabs update without a reload.
+- **Recheck this page** in the popup, and the right-click menu item with the same name, re-run detection after a site changes its theme without a reload.
 - Separate rules for YouTube, YouTube Music, Twitch and Rezka.
-- Twitch side navigation and chat are black while chat text keeps its own colours.
-- Shadow DOM and iframes receive matching media rules.
+- Twitch side navigation, chat, input and player controls are black or transparent while chat text, the typed message and control icons stay visible.
+- Shadow DOM and iframes receive matching media rules. CSS background images are inverted back to their natural colours too.
 
 ## Controls
 
-- Click the toolbar icon for two switches.
-- Right-click the icon to toggle site darkening.
+- Click the toolbar icon for two switches and the site lists.
+- Right-click the icon to toggle site darkening or recheck the current page.
 - `Alt+Shift+D` toggles both switches together.
 
 The theme and site switches do not affect each other.

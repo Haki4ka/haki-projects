@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Haki OLED — Sites + Theme",
   "short_name": "Haki OLED",
-  "version": "3.3.2",
+  "version": "3.4.0",
   "description": "One compact menu with two independent switches: deep black browser theme and site darkening. Built for Brave.",
   "permissions": ["management", "storage", "contextMenus"],
   "host_permissions": ["<all_urls>"],

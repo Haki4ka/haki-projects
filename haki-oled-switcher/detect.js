@@ -5,14 +5,17 @@
   var root = document.documentElement;
   var SITES_KEY = 'sitesEnabled';
   var GRAY_KEY = 'graySites';
+  var EXCLUDE_KEY = 'excludedSites';
+  var BG_ATTR = 'data-haki-bgmedia';
   var enabled = true;
   var graySites = [];
-  
+  var excludedSites = [];
+
   var appliedMode = null;
   var inFrame = window.self !== window.top;
   var parentDark = null;
   var shadowStyleId = 'haki-shadow-media';
-  var SHADOW_CSS = 'video,img,canvas,picture,source,embed,object,[style*="background-image"]' +
+  var SHADOW_CSS = 'video,img,canvas,picture,source,embed,object,[style*="background-image"],[data-haki-bgmedia]' +
     '{filter:invert(1) hue-rotate(180deg) contrast(0.625) !important}';
 
   
@@ -30,14 +33,17 @@
     return s.replace(/^www\./, '').replace(/^\.+|\.+$/g, '');
   }
 
-  function hostInGrayList() {
+  function hostInList(list) {
     var host = location.hostname.toLowerCase().replace(/^www\./, '');
-    for (var i = 0; i < graySites.length; i++) {
-      var d = normalizeDomain(graySites[i]);
+    for (var i = 0; i < list.length; i++) {
+      var d = normalizeDomain(list[i]);
       if (d && (host === d || host.slice(-(d.length + 1)) === '.' + d)) return true;
     }
     return false;
   }
+
+  function hostInGrayList() { return hostInList(graySites); }
+  function hostInExcludeList() { return hostInList(excludedSites); }
 
   function luminance(color) {
     if (!color || color.indexOf('rgb') !== 0) return null;
@@ -56,23 +62,60 @@
   }
 
   
-  function injectShadowStyles() {
-    if (!enabled || !root.classList.contains('haki-force-dark')) return;
-    var hosts = document.querySelectorAll('*');
+  function eachShadowRoot(node, cb, depth) {
+    if (!node || !node.querySelectorAll || depth > 5) return;
+    var hosts = node.querySelectorAll('*');
     for (var i = 0; i < hosts.length; i++) {
       var sr = hosts[i].shadowRoot;
-      if (!sr || sr.getElementById(shadowStyleId)) continue;
+      if (!sr) continue;
+      cb(sr);
+      eachShadowRoot(sr, cb, depth + 1);
+    }
+  }
+
+  function injectShadowStyles() {
+    if (!enabled || !root.classList.contains('haki-force-dark')) return;
+    function put(sr) {
+      if (sr.getElementById && sr.getElementById(shadowStyleId)) return;
       var s = document.createElement('style');
       s.id = shadowStyleId;
       s.textContent = SHADOW_CSS;
       (sr.head || sr).appendChild(s);
     }
+    eachShadowRoot(document, put, 0);
+  }
+
+  
+  var taggedBg = [];
+  function tagBackgroundMedia() {
+    if (!enabled || !root.classList.contains('haki-force-dark')) return;
+    function scan(node) {
+      var els = node.querySelectorAll ? node.querySelectorAll('*') : [];
+      for (var i = 0; i < els.length && i < 6000; i++) {
+        var el = els[i];
+        if (el.hasAttribute && el.hasAttribute(BG_ATTR)) continue;
+        var st = getComputedStyle(el);
+        if (!st.backgroundImage || st.backgroundImage === 'none') continue;
+        var r = el.getBoundingClientRect();
+        if (r.width < 24 || r.height < 12) continue;
+        el.setAttribute(BG_ATTR, '1');
+        taggedBg.push(el);
+      }
+    }
+    scan(document.body || document);
+    eachShadowRoot(document, scan, 0);
+  }
+
+  function untagBackgroundMedia() {
+    for (var i = 0; i < taggedBg.length; i++) taggedBg[i].removeAttribute(BG_ATTR);
+    taggedBg = [];
   }
 
   
   var fixedColors = [];
   function normalizeColors() {
     if (!enabled || !root.classList.contains('haki-force-dark')) return;
+    var plan = [];
     var els = document.querySelectorAll('body *');
     for (var i = 0; i < els.length && i < 4000; i++) {
       var el = els[i];
@@ -90,11 +133,16 @@
       if (s.backdropFilter && s.backdropFilter !== 'none') continue;
       var r = el.getBoundingClientRect();
       if (r.width < 24 || r.height < 12) continue;
-      fixedColors.push({ el: el, bg: el.style.backgroundColor, color: el.style.color });
-      el.style.setProperty('background-color', '#fff', 'important');
-      el.style.setProperty('color', '#000', 'important');
-      el.setAttribute('data-haki-color-fix', '1');
+      plan.push({ el: el, bg: el.style.backgroundColor, color: el.style.color });
     }
+    for (var j = 0; j < plan.length; j++) {
+      var f = plan[j];
+      fixedColors.push(f);
+      f.el.style.setProperty('background-color', '#fff', 'important');
+      f.el.style.setProperty('color', '#000', 'important');
+      f.el.setAttribute('data-haki-color-fix', '1');
+    }
+    tagBackgroundMedia();
   }
   function restoreColors() {
     for (var i = 0; i < fixedColors.length; i++) {
@@ -128,12 +176,14 @@
     var invert = mode === 'invert';
     var cls = invert ? 'haki-force-dark' : 'haki-gray';
     if (!root.classList.contains(cls)) return;
+    if (invert) tagBackgroundMedia();
+    var plan = [];
     var els = document.querySelectorAll('body *');
     for (var i = 0; i < els.length && i < 8000; i++) {
       var el = els[i];
       if (el.hasAttribute('data-haki-surface')) continue;
       var isMedia = SKIP_TAGS.test(el.tagName);
-      
+
       if (isMedia && el.tagName !== 'IMG') continue;
       var s = getComputedStyle(el);
       var bgRaw = rgb(s.backgroundColor);
@@ -144,7 +194,7 @@
       if (r.width < 18 || r.height < 9) continue;
       var changes = [];
       var c;
-      
+
       var hasText = false;
       if (!isMedia) {
         var nodes = el.childNodes;
@@ -156,16 +206,12 @@
         }
       }
 
-      
       if (bg && bgRaw.a > 0.15 && bg.spread <= 16 && bg.mx >= 10 && bg.mx <= 110) {
-        
         if (!(s.backdropFilter && s.backdropFilter !== 'none')) {
-          c = { prop: 'background-color', val: invert ? '#ffffff' : '#000000' };
-          changes.push(c);
+          changes.push({ prop: 'background-color', val: invert ? '#ffffff' : '#000000' });
         }
       }
 
-      
       if (hasText && fg && fg.spread <= 32) {
         var needColor = false;
         if (invert) {
@@ -182,14 +228,20 @@
       }
 
       if (!changes.length) continue;
-      var saved = { el: el };
+      var saved = { el: el, changes: changes };
       for (var j = 0; j < changes.length; j++) {
         c = changes[j];
         saved[c.prop] = el.style.getPropertyValue(c.prop);
-        el.style.setProperty(c.prop, c.val, 'important');
       }
-      surfaceFixes.push(saved);
-      el.setAttribute('data-haki-surface', '1');
+      plan.push(saved);
+    }
+    for (var m = 0; m < plan.length; m++) {
+      var f = plan[m];
+      for (var n = 0; n < f.changes.length; n++) {
+        f.el.style.setProperty(f.changes[n].prop, f.changes[n].val, 'important');
+      }
+      surfaceFixes.push(f);
+      f.el.setAttribute('data-haki-surface', '1');
     }
   }
 
@@ -206,22 +258,26 @@
   }
 
   
-  function strip() {
+  function clearApplied() {
     restoreColors();
     restoreSurfaceFix();
-    root.classList.remove('haki-force-dark', 'haki-gray', 'haki-youtube', 'haki-twitch', 'haki-rezka',
+    untagBackgroundMedia();
+    root.classList.remove('haki-force-dark', 'haki-gray');
+    appliedMode = null;
+  }
+
+  function strip() {
+    clearApplied();
+    root.classList.remove('haki-youtube', 'haki-twitch', 'haki-rezka',
       'haki-frame-media', 'haki-frame-native');
     ['haki-youtube-oled', 'haki-twitch-oled'].forEach(function (id) {
       var el = document.getElementById(id);
       if (el && el.parentNode) el.parentNode.removeChild(el);
     });
-    var hosts = document.querySelectorAll('*');
-    for (var i = 0; i < hosts.length; i++) {
-      var sr = hosts[i].shadowRoot;
-      if (!sr) continue;
+    eachShadowRoot(document, function (sr) {
       var s = sr.getElementById ? sr.getElementById(shadowStyleId) : sr.querySelector('#' + shadowStyleId);
       if (s && s.parentNode) s.parentNode.removeChild(s);
-    }
+    }, 0);
   }
 
   
@@ -368,21 +424,77 @@
       'html.haki-twitch [class*="side-nav"],',
       'html.haki-twitch [class*="channel-root__left-column"],',
       'html.haki-twitch [class*="channel-root__right-column"],',
-      
       'html.haki-twitch section[class*="chat-room"],',
       'html.haki-twitch [class*="chat-room__content"],',
       'html.haki-twitch [class*="chat-wysiwyg"],',
-      'html.haki-twitch [class*="chat-input"] { background-color: #000 !important; }',
+      'html.haki-twitch [class*="chat-input"],',
+      'html.haki-twitch [class*="chat-input__textarea"],',
+      'html.haki-twitch [class*="chat-input__textarea"] * { background-color: #000 !important; }',
+      'html.haki-twitch [class*="chat-wysiwyg-input-box"],',
+      'html.haki-twitch [class*="chat-input__textarea"] {',
+      '  box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset !important;',
+      '  border-color: rgba(255,255,255,.08) !important;',
+      '}',
       'html.haki-twitch [class*="chat-room__viewer-card"],',
       'html.haki-twitch [class*="chat-room__notifications"],',
-      'html.haki-twitch [class*="celebration__overlay"] { background-color: transparent !important; }',
+      'html.haki-twitch [class*="celebration__overlay"] {',
+      '  background-color: transparent !important;',
+      '  box-shadow: none !important;',
+      '}',
       'html.haki-twitch [class*="side-nav-card"] { background-color: #000 !important; }',
       'html.haki-twitch [class*="side-nav-card"]:hover,',
       'html.haki-twitch [class*="side-nav-card"]:focus { background-color: #0a0a0a !important; }',
-      
+      'html.haki-twitch [class*="community-highlight"],',
+      'html.haki-twitch [class*="community-highlight-stack"],',
+      'html.haki-twitch [class*="highlight__card"],',
+      'html.haki-twitch [class*="chat-line__message-highlight"],',
+      'html.haki-twitch [class*="chat-line__message-container"],',
+      'html.haki-twitch [class*="announcement-line"],',
+      'html.haki-twitch [class*="chat-line__status"] {',
+      '  background-color: transparent !important;',
+      '  box-shadow: none !important;',
+      '  border-color: rgba(255,255,255,.06) !important;',
+      '}',
       'html.haki-twitch [class*="chat-line__message"] {',
       '  background-color: transparent !important;',
+      '  box-shadow: none !important;',
       '  font-weight: 400 !important; opacity: 1 !important;',
+      '}',
+      'html.haki-twitch [class*="player-controls"] button,',
+      'html.haki-twitch button[aria-label*="Play"],',
+      'html.haki-twitch button[aria-label*="Mute"],',
+      'html.haki-twitch button[aria-label*="Unmute"],',
+      'html.haki-twitch button[aria-label*="Settings"],',
+      'html.haki-twitch button[aria-label*="Theatre"],',
+      'html.haki-twitch button[aria-label*="Fullscreen"],',
+      'html.haki-twitch button[aria-label*="Captions"],',
+      'html.haki-twitch button[aria-label*="Quality"] {',
+      '  background-color: transparent !important;',
+      '  box-shadow: none !important;',
+      '  border-color: transparent !important;',
+      '}',
+      'html.haki-twitch [class*="player-controls"] button:hover,',
+      'html.haki-twitch [class*="player-controls"] button:focus,',
+      'html.haki-twitch button[aria-label*="Play"]:hover,',
+      'html.haki-twitch button[aria-label*="Mute"]:hover,',
+      'html.haki-twitch button[aria-label*="Unmute"]:hover,',
+      'html.haki-twitch button[aria-label*="Settings"]:hover,',
+      'html.haki-twitch button[aria-label*="Theatre"]:hover,',
+      'html.haki-twitch button[aria-label*="Fullscreen"]:hover {',
+      '  background-color: transparent !important;',
+      '}',
+      'html.haki-twitch [class*="player-controls"] button svg,',
+      'html.haki-twitch [class*="player-controls"] button path,',
+      'html.haki-twitch [class*="player-controls"] [class*="ButtonIconFigure"],',
+      'html.haki-twitch button[aria-label*="Play"] svg,',
+      'html.haki-twitch button[aria-label*="Mute"] svg,',
+      'html.haki-twitch button[aria-label*="Unmute"] svg,',
+      'html.haki-twitch button[aria-label*="Settings"] svg,',
+      'html.haki-twitch button[aria-label*="Theatre"] svg,',
+      'html.haki-twitch button[aria-label*="Fullscreen"] svg {',
+      '  fill: #fff !important;',
+      '  color: #fff !important;',
+      '  background-color: transparent !important;',
       '}'
     ].join('\n');
     var style = document.createElement('style');
@@ -394,6 +506,12 @@
   
   function runDetection() {
     strip();
+
+    /* "Never darken" wins over special handling and auto detection. */
+    if (hostInExcludeList()) {
+      notifyFrames(false);
+      return;
+    }
 
     if (inFrame) {
       window.parent.postMessage({ type: 'haki-frame-request' }, '*');
@@ -467,24 +585,51 @@
   function evaluate(final) {
     if (!enabled || !root || !document.body) return;
 
+    if (hostInExcludeList()) {
+      if (appliedMode !== 'excluded') {
+        clearApplied();
+        appliedMode = 'excluded';
+      }
+      root.classList.remove('haki-force-dark', 'haki-gray');
+      notifyFrames(false);
+      return;
+    }
+
     var scheme = getComputedStyle(root).colorScheme || '';
-    var schemeDark = scheme.indexOf('dark') !== -1;
+    /* "light dark" is the browser's preference, not the site's own dark theme.
+       Only an explicit "dark" declaration gets native-dark protection. */
+    var schemeDark = scheme.indexOf('dark') !== -1 && scheme.indexOf('light') === -1;
+    var grayListed = hostInGrayList();
     var vis = visibleBackgrounds();
     var samples = backgrounds().concat(vis);
     var isLight = samples.some(function (c) {
       var l = luminance(c);
       return l !== null && l > 0.58;
     });
-    
-    var isGray = hostInGrayList() || (vis.length > 0 && vis.every(function (c) {
+
+    /* A page that already declares a dark scheme keeps its own palette.
+       An explicit gray-list entry still wins. */
+    if (schemeDark && !grayListed) {
+      clearApplied();
+      notifyFrames(false);
+      return;
+    }
+
+    var isGray = grayListed || (vis.length > 0 && vis.every(function (c) {
       var l = luminance(c);
       return l !== null && l >= 0.02 && l <= 0.36;
     }));
 
-    
     var fallbackLight = vis.length === 0 && !schemeDark;
 
-    if (isLight || fallbackLight) {
+    /* An explicit gray-list entry wins over light detection too. */
+    if (grayListed) {
+      var wasGrayListed = root.classList.contains('haki-gray');
+      root.classList.remove('haki-force-dark');
+      root.classList.add('haki-gray');
+      appliedMode = 'gray';
+      if (!wasGrayListed) applySurfaceFix('gray');
+    } else if (isLight || fallbackLight) {
       var wasOn = root.classList.contains('haki-force-dark');
       root.classList.remove('haki-gray');
       root.classList.add('haki-force-dark');
@@ -498,7 +643,7 @@
       appliedMode = 'gray';
       if (!wasGray) applySurfaceFix('gray');
     } else if (final && !appliedMode) {
-      root.classList.remove('haki-force-dark', 'haki-gray');
+      clearApplied();
     }
     if (root.classList.contains('haki-force-dark') && final) applySurfaceFix('invert');
     notifyFrames(root.classList.contains('haki-force-dark'));
@@ -583,8 +728,10 @@
   var query = {};
   query[SITES_KEY] = true;
   query[GRAY_KEY] = true;
+  query[EXCLUDE_KEY] = true;
   chrome.storage.local.get(query, function (data) {
     graySites = Array.isArray(data[GRAY_KEY]) ? data[GRAY_KEY] : [];
+    excludedSites = Array.isArray(data[EXCLUDE_KEY]) ? data[EXCLUDE_KEY] : [];
     setEnabled(data[SITES_KEY] !== false);
   });
 
@@ -595,6 +742,11 @@
       graySites = Array.isArray(msg.sites) ? msg.sites : [];
       if (enabled) runDetection();
     }
+    if (msg.type === 'haki-excluded-list-changed') {
+      excludedSites = Array.isArray(msg.sites) ? msg.sites : [];
+      if (enabled) runDetection();
+    }
+    if (msg.type === 'haki-recheck' && enabled) runDetection();
   });
 
   

@@ -7,12 +7,19 @@
   var sitesToggle = document.getElementById('sitesToggle');
   var statusText = document.getElementById('statusText');
   var statusDot = document.getElementById('statusDot');
-  var grayList = document.getElementById('grayList');
-  var grayEmpty = document.getElementById('grayEmpty');
   var grayInput = document.getElementById('grayInput');
   var grayAdd = document.getElementById('grayAdd');
+  var excludedInput = document.getElementById('excludedInput');
+  var excludedAdd = document.getElementById('excludedAdd');
+  var recheckBtn = document.getElementById('recheckBtn');
 
-  var state = { theme: false, sites: false, themeAvailable: true, graySites: [] };
+  var state = {
+    theme: false,
+    sites: false,
+    themeAvailable: true,
+    graySites: [],
+    excludedSites: []
+  };
   var locked = false;
 
   function render() {
@@ -43,16 +50,17 @@
       statusDot.className = 'dot';
     }
 
-    renderGray();
+    renderChips('gray', document.getElementById('grayList'), document.getElementById('grayEmpty'), state.graySites);
+    renderChips('excluded', document.getElementById('excludedList'), document.getElementById('excludedEmpty'), state.excludedSites);
   }
 
-  function renderGray() {
-    while (grayList.firstChild) grayList.removeChild(grayList.firstChild);
-    if (!state.graySites.length) {
-      grayList.appendChild(grayEmpty);
+  function renderChips(kind, container, empty, sites) {
+    while (container.firstChild) container.removeChild(container.firstChild);
+    if (!sites.length) {
+      container.appendChild(empty);
       return;
     }
-    state.graySites.forEach(function (site) {
+    sites.forEach(function (site) {
       var chip = document.createElement('span');
       chip.className = 'gray-chip';
       var label = document.createElement('span');
@@ -62,10 +70,10 @@
       remove.textContent = '×';
       remove.title = 'Remove ' + site;
       remove.setAttribute('aria-label', 'Remove ' + site);
-      remove.addEventListener('click', function () { saveGray(site, false); });
+      remove.addEventListener('click', function () { saveSite(kind, site, false); });
       chip.appendChild(label);
       chip.appendChild(remove);
-      grayList.appendChild(chip);
+      container.appendChild(chip);
     });
   }
 
@@ -100,42 +108,69 @@
     var t = await ask('haki-theme-get');
     var s = await ask('haki-sites-get');
     var g = await ask('haki-gray-get');
+    var x = await ask('haki-excluded-get');
     state.themeAvailable = !!(t && t.enabled !== null && t.enabled !== undefined);
     state.theme = state.themeAvailable ? !!t.enabled : false;
     state.sites = !s || s.enabled !== false;
     state.graySites = Array.isArray(g && g.sites) ? g.sites : [];
+    state.excludedSites = Array.isArray(x && x.sites) ? x.sites : [];
     render();
   }
 
-  async function saveGray(site, add) {
+  async function saveSite(kind, site, add) {
     if (locked) return;
-    var list = state.graySites.slice();
+    var key = kind === 'gray' ? 'graySites' : 'excludedSites';
+    var msgType = kind === 'gray' ? 'haki-gray-set' : 'haki-excluded-set';
+    var list = state[key].slice();
     var idx = list.indexOf(site);
     if (add && idx === -1) list.push(site);
     if (!add && idx !== -1) list.splice(idx, 1);
-    if (list.length === state.graySites.length && idx === -1) return;
-    var res = await askPayload('haki-gray-set', { sites: list });
-    if (res && Array.isArray(res.sites)) state.graySites = res.sites;
+    if (list.length === state[key].length && idx === -1) return;
+    var res = await askPayload(msgType, { sites: list });
+    if (res && Array.isArray(res.sites)) state[key] = res.sites;
     render();
   }
 
-  function submitGray() {
-    var raw = grayInput.value.trim().toLowerCase();
-    if (!raw) return;
+  function normalize(raw) {
+    if (!raw) return '';
     if (raw.indexOf('://') === -1) raw = 'https://' + raw;
     var site;
     try { site = new URL(raw).hostname.toLowerCase(); }
-    catch (e) { grayInput.value = ''; return; }
-    site = site.replace(/^www\./, '').replace(/^\.+|\.+$/g, '');
-    if (!site) return;
-    grayInput.value = '';
-    void saveGray(site, true);
+    catch (e) { return ''; }
+    return site.replace(/^www\./, '').replace(/^\.+|\.+$/g, '');
   }
 
-  grayAdd.addEventListener('click', submitGray);
+  function submit(kind) {
+    var input = kind === 'gray' ? grayInput : excludedInput;
+    var site = normalize(input.value.trim().toLowerCase());
+    input.value = '';
+    if (!site) return;
+    void saveSite(kind, site, true);
+  }
+
+  grayAdd.addEventListener('click', function () { submit('gray'); });
+  excludedAdd.addEventListener('click', function () { submit('excluded'); });
+
   grayInput.addEventListener('input', function () { grayAdd.disabled = !grayInput.value.trim(); });
-  grayInput.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') submitGray();
+  excludedInput.addEventListener('input', function () { excludedAdd.disabled = !excludedInput.value.trim(); });
+
+  [grayInput, excludedInput].forEach(function (input, index) {
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') submit(index === 0 ? 'gray' : 'excluded');
+    });
+  });
+
+  recheckBtn.addEventListener('click', async function () {
+    if (locked) return;
+    var old = recheckBtn.textContent;
+    recheckBtn.textContent = 'Checking…';
+    await ask('haki-recheck');
+    recheckBtn.textContent = 'Checked';
+    recheckBtn.classList.add('done');
+    window.setTimeout(function () {
+      recheckBtn.textContent = old;
+      recheckBtn.classList.remove('done');
+    }, 1400);
   });
 
   async function flip(which, next) {
@@ -175,7 +210,7 @@
      while the popup is open. */
   chrome.runtime.onMessage.addListener(function (msg) {
     if (msg && (msg.type === 'haki-sites-state' || msg.type === 'haki-all-changed' ||
-        msg.type === 'haki-gray-list-changed')) refresh();
+        msg.type === 'haki-gray-list-changed' || msg.type === 'haki-excluded-list-changed')) refresh();
   });
 
   document.addEventListener('keydown', function (e) {

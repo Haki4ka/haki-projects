@@ -15,7 +15,8 @@ html.haki-force-dark picture,
 html.haki-force-dark source,
 html.haki-force-dark embed,
 html.haki-force-dark object,
-html.haki-force-dark [style*="background-image"] {
+html.haki-force-dark [style*="background-image"],
+html.haki-force-dark [data-haki-bgmedia] {
   filter: invert(1) hue-rotate(180deg) contrast(0.625) !important;
 }
 
@@ -46,7 +47,8 @@ html.haki-frame-media picture,
 html.haki-frame-media source,
 html.haki-frame-media embed,
 html.haki-frame-media object,
-html.haki-frame-media [style*="background-image"] {
+html.haki-frame-media [style*="background-image"],
+html.haki-frame-media [data-haki-bgmedia] {
   filter: invert(1) hue-rotate(180deg) contrast(0.625) !important;
 }
 

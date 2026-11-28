@@ -1,14 +1,16 @@
-/* Haki OLED v3.3.2
+/* Haki OLED v3.4.0
    One toolbar button opens popup.html with two independent switches:
      1) browser theme -> chrome.management.setEnabled(THEME_ID, ...)
      2) site darkening -> chrome.storage.local['sitesEnabled']
-   The popup also edits a gray-mode list: domains there get dark surfaces
-   without inversion. Alt+Shift+D toggles BOTH main switches at once. */
+   The popup edits a gray-mode list and an exclude list. Alt+Shift+D toggles
+   BOTH main switches at once. "Recheck this page" re-runs detection. */
 
 const THEME_ID = 'pdbcicihgbipdocokmncbakabphbmipi';
 const SITES_KEY = 'sitesEnabled';
 const GRAY_KEY = 'graySites';
+const EXCLUDED_KEY = 'excludedSites';
 const SITES_MENU = 'haki-toggle-sites';
+const RECHECK_MENU = 'haki-recheck-page';
 
 /* ---------- Browser theme ---------- */
 
@@ -77,6 +79,30 @@ async function setGraySites(list) {
       });
     }
   });
+  return sites;
+}
+
+async function getExcludedSites() {
+  const data = await chrome.storage.local.get(EXCLUDED_KEY);
+  return cleanDomains(data[EXCLUDED_KEY]);
+}
+
+async function setExcludedSites(list) {
+  const sites = cleanDomains(list);
+  await chrome.storage.local.set({ [EXCLUDED_KEY]: sites });
+  chrome.tabs.query({}, function (tabs) {
+    for (const tab of tabs) {
+      if (!tab.id) continue;
+      chrome.tabs.sendMessage(tab.id, { type: 'haki-excluded-list-changed', sites: sites }, function () {
+        void chrome.runtime.lastError;
+      });
+    }
+  });
+  try {
+    await chrome.runtime.sendMessage({ type: 'haki-excluded-list-changed', sites: sites });
+  } catch (e) {
+    void e;
+  }
   return sites;
 }
 
@@ -179,13 +205,29 @@ async function createSitesMenu() {
         : 'Haki OLED: enable site darkening',
       contexts: ['page']
     });
+    await chrome.contextMenus.create({
+      id: RECHECK_MENU,
+      title: 'Haki OLED: recheck this page',
+      contexts: ['page']
+    });
   } catch (e) {
     console.error('Haki OLED (menu):', e);
   }
 }
 
-chrome.contextMenus.onClicked.addListener(function (info) {
+function recheckTab(tab) {
+  if (!tab || !tab.id) return Promise.resolve(false);
+  return new Promise(function (resolve) {
+    chrome.tabs.sendMessage(tab.id, { type: 'haki-recheck' }, function () {
+      void chrome.runtime.lastError;
+      resolve(true);
+    });
+  });
+}
+
+chrome.contextMenus.onClicked.addListener(function (info, tab) {
   if (info.menuItemId === SITES_MENU) toggleSites();
+  if (info.menuItemId === RECHECK_MENU) recheckTab(tab);
 });
 
 chrome.commands.onCommand.addListener(function (command) {
@@ -224,6 +266,17 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
       return true;
     case 'haki-gray-set':
       setGraySites(msg.sites).then(function (sites) { sendResponse({ sites: sites }); });
+      return true;
+    case 'haki-excluded-get':
+      getExcludedSites().then(function (sites) { sendResponse({ sites: sites }); });
+      return true;
+    case 'haki-excluded-set':
+      setExcludedSites(msg.sites).then(function (sites) { sendResponse({ sites: sites }); });
+      return true;
+    case 'haki-recheck':
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        recheckTab(tabs && tabs[0]).then(function (ok) { sendResponse({ ok: ok }); });
+      });
       return true;
     default:
       return false;
