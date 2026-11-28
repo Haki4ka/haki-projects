@@ -1,19 +1,20 @@
 # Haki Projects
 
-Two browser extensions for Chromium-based browsers, plus the small tools that check their filter rules. Built and tested in Brave.
+Browser extensions for Chromium-based browsers, plus the small tools that check their filter rules. Built and tested in Brave.
 
 | Folder | Description |
 |---|---|
 | `haki-shield/` | Manifest V3 ad blocker: manual rules, an EasyList-derived layer, video-ad protection and Twitch stream hooks. |
 | `haki-oled-switcher/` | Toolbar button for a pure-black browser theme and independent site darkening. |
 | `haki-oled-theme/` | Companion deep-black theme, tuned for Brave. |
+| `haki-speed/` | Playback speed controller for HTML5 video, with a floating panel and a discreet player bar. |
 | `tools/` | Converter and rule checks used during development. |
 
 ## Install
 
 Download a ZIP from Releases, unpack it, then open `brave://extensions`, enable developer mode and choose **Load unpacked**. No build step is required.
 
-The OLED ZIP contains `theme/` and `switcher/`; load both folders. The Shield ZIP is loaded as one extension.
+The OLED ZIP contains `theme/` and `switcher/`; load both folders. The Shield and Speed ZIPs are each loaded as one extension.
 
 ## License
 
