@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "Haki Speed",
+  "short_name": "Haki Speed",
+  "version": "1.4.0",
+  "description": "A modern playback speed panel with a discreet player bar for every HTML5 video on the page.",
+  "permissions": ["storage", "tabs", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Haki Speed — show / hide panel",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["defaults.js", "content.js"],
+      "all_frames": true,
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "speed-up": {
+      "suggested_key": { "default": "Alt+Shift+U" },
+      "description": "Increase playback speed"
+    },
+    "speed-down": {
+      "suggested_key": { "default": "Alt+Shift+S" },
+      "description": "Decrease playback speed"
+    },
+    "speed-reset": {
+      "suggested_key": { "default": "Alt+Shift+R" },
+      "description": "Reset playback speed to 1x"
+    },
+    "toggle-panel": {
+      "suggested_key": { "default": "Alt+Shift+P" },
+      "description": "Show or hide the floating panel"
+    }
+  }
+}

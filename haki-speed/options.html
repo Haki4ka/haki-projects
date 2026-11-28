@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Haki Speed — Settings</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <header class="top">
+    <span class="logo"></span>
+    <div><h1>Haki Speed</h1><p>Settings are stored locally on this device</p></div>
+    <span class="ver">v1.4.0</span>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Appearance</h2>
+      <div class="grid">
+        <label class="field">Theme
+          <select data-setting="theme"><option value="dark">OLED dark</option><option value="light">Light</option></select>
+        </label>
+        <label class="field">Size
+          <select data-setting="size"><option value="compact">Compact</option><option value="normal">Normal</option><option value="large">Large</option></select>
+        </label>
+        <label class="field">Panel opacity
+          <input type="range" data-setting="opacity" data-num min="40" max="100">
+        </label>
+        <label class="field">Position
+          <select data-setting="corner">
+            <option value="bottom-right">Bottom right</option><option value="bottom-left">Bottom left</option>
+            <option value="top-right">Top right</option><option value="top-left">Top left</option>
+            <option value="custom">Where I dragged it</option>
+          </select>
+        </label>
+        <label class="field">Offset X (px)
+          <input type="number" data-setting="offsetX" data-num min="0" max="300">
+        </label>
+        <label class="field">Offset Y (px)
+          <input type="number" data-setting="offsetY" data-num min="0" max="300">
+        </label>
+        <label class="field">Player bar position
+          <select data-setting="dockPosition">
+            <option value="top-left">Top left</option>
+            <option value="top-center">Top center</option>
+            <option value="top-right">Top right</option>
+            <option value="bottom-left">Bottom left</option>
+            <option value="bottom-center">Bottom center</option>
+            <option value="bottom-right">Bottom right</option>
+          </select>
+        </label>
+        <label class="field">Player bar inset (px)
+          <input type="number" data-setting="dockOffset" data-num min="0" max="80">
+        </label>
+      </div>
+      <div class="switches">
+        <label class="switch"><input type="checkbox" data-setting="ambient"><span>Ambient glow &amp; pointer fog</span></label>
+        <label class="switch"><input type="checkbox" data-setting="showLabel"><span>Show brand label</span></label>
+        <label class="switch"><input type="checkbox" data-setting="collapsed"><span>Start collapsed</span></label>
+        <label class="switch"><input type="checkbox" data-setting="autoShow"><span>Hide floating when no video</span></label>
+        <label class="switch"><input type="checkbox" data-setting="panelVisible"><span>Floating panel shown</span></label>
+        <label class="switch"><input type="checkbox" data-setting="dockEnabled"><span>Player bar on video hover</span></label>
+      </div>
+      <p class="hint" style="margin:14px 0 0">The floating panel is hidden by default. Show it with the toolbar button or its hotkey. The small player bar appears only while the pointer is over a video.</p>
+      <p style="margin:14px 0 0"><button id="resetPos" class="ghost">Reset to corner preset</button></p>
+    </section>
+
+    <section class="card">
+      <h2>Speed behavior</h2>
+      <div class="grid">
+        <label class="field">Step
+          <select data-setting="step" data-num>
+            <option value="0.05">0.05×</option><option value="0.1">0.10×</option>
+            <option value="0.15">0.15×</option><option value="0.2">0.20×</option>
+            <option value="0.25">0.25×</option><option value="0.3">0.30×</option>
+            <option value="0.35">0.35×</option><option value="0.4">0.40×</option>
+            <option value="0.45">0.45×</option><option value="0.5">0.50×</option>
+            <option value="0.55">0.55×</option><option value="0.6">0.60×</option>
+            <option value="0.65">0.65×</option><option value="0.7">0.70×</option>
+            <option value="0.75">0.75×</option><option value="0.8">0.80×</option>
+            <option value="0.85">0.85×</option><option value="0.9">0.90×</option>
+            <option value="0.95">0.95×</option><option value="1">1.00×</option>
+          </select>
+        </label>
+        <label class="field">Remember speed for
+          <select data-setting="scope"><option value="domain">Domain</option><option value="path">Domain + path</option></select>
+        </label>
+        <label class="field">Minimum
+          <input type="number" data-setting="min" data-num min="0.1" max="2" step="0.05">
+        </label>
+        <label class="field">Maximum
+          <input type="number" data-setting="max" data-num min="1" max="16" step="0.25">
+        </label>
+        <label class="field">Wheel modifier
+          <select data-setting="wheelModifier">
+            <option value="shift">Shift + wheel</option>
+            <option value="alt">Alt + wheel</option>
+            <option value="ctrl">Ctrl + wheel</option>
+            <option value="meta">Meta + wheel</option>
+            <option value="none">Any wheel (no modifier)</option>
+            <option value="off">Disabled — Hotkeys only</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint" style="margin:14px 0 0">The wheel modifier is a quick shortcut over a video or either panel. <b>Disabled</b> turns it off completely. Any combination recorded in Hotkeys still works and takes priority.</p>
+      <div class="switches">
+        <label class="switch"><input type="checkbox" data-setting="enabled"><span>Extension enabled</span></label>
+        <label class="switch"><input type="checkbox" data-setting="remember"><span>Remember speed per site</span></label>
+        <label class="switch"><input type="checkbox" data-setting="syncAll"><span>One shared speed on all sites</span></label>
+        <label class="switch"><input type="checkbox" data-setting="followSite"><span>Follow site's own speed control</span></label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Hotkeys</h2>
+      <p class="hint">By default <b>Shift + Wheel Up</b> is faster and <b>Shift + Wheel Down</b> is slower. Click any row and then press a key, scroll the wheel, or click <b>any mouse button — left, middle (wheel click), right, back or forward</b> — with any combination of Ctrl / Alt / Shift / Meta. <b>Esc</b> cancels. Wheel and mouse-button combos work over a video or either panel; key combos work wherever the page has focus. A recorded combo wins over the Wheel modifier. Browser-level shortcuts can be rebound in <code>brave://extensions/shortcuts</code>.</p>
+      <div class="keyrow"><span>Faster</span><button data-key="up">Not set</button><button class="clear" data-clear="up" title="Clear">×</button></div>
+      <div class="keyrow"><span>Slower</span><button data-key="down">Not set</button><button class="clear" data-clear="down" title="Clear">×</button></div>
+      <div class="keyrow"><span>Reset to 1×</span><button data-key="reset">Not set</button><button class="clear" data-clear="reset" title="Clear">×</button></div>
+      <div class="keyrow"><span>Show / hide panel</span><button data-key="toggle">Not set</button><button class="clear" data-clear="toggle" title="Clear">×</button></div>
+    </section>
+
+    <section class="card">
+      <h2>Reset</h2>
+      <button id="resetAll" class="danger">Restore all defaults</button>
+    </section>
+  </main>
+  <script src="defaults.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
